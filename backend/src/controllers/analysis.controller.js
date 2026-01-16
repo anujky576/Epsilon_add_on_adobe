@@ -221,11 +221,25 @@ export const runAnalysis = async (req, res, next) => {
       }
     }
 
+    // Sanitize violations to ensure all required fields are present
+    const sanitizedViolations = (analysisResult.violations || [])
+      .filter((v) => v && typeof v === "object")
+      .map((violation) => ({
+        type: violation.type || violation.category || "other",
+        severity: violation.severity || "medium",
+        description: violation.description || violation.message || "Violation detected",
+        affectedElement: violation.affectedElement || violation.element || violation.affected || "Unknown element",
+        suggestedFix: violation.suggestedFix || violation.fix || violation.suggestion || null,
+        autoFixable: violation.autoFixable ?? false,
+        resolved: violation.resolved ?? false,
+      }))
+      .filter((v) => v.type && v.affectedElement); // Ensure required fields exist
+
     const savedResult = new AnalysisResult({
       designId: design._id,
       brandKitId: brandKit._id,
       complianceScore: analysisResult.complianceScore || 0,
-      violations: analysisResult.violations || [],
+      violations: sanitizedViolations,
       categoryScores: formattedCategoryScores,
       summary: analysisResult.summary || "Analysis complete.",
       usedAI: analysisResult.usedAI !== false,

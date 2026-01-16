@@ -88,6 +88,14 @@ const userSchema = new mongoose.Schema(
         default: true,
       },
     },
+
+    /**
+     * Last login timestamp
+     */
+    lastLoginAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   {
     timestamps: true, // Adds createdAt and updatedAt

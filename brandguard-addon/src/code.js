@@ -287,9 +287,17 @@ function extractDesignData() {
  */
 runtime.exposeApi({
   extractDesignData: () => {
-    console.log("BrandGuard: Extracting design data from canvas...");
-    return extractDesignData();
+    console.log("BrandGuard: extractDesignData() called from panel");
+    try {
+      const data = extractDesignData();
+      console.log("BrandGuard: Returning design data with", data.colorsUsed.length, "colors,", data.fontsUsed.length, "fonts");
+      return data;
+    } catch (error) {
+      console.error("BrandGuard: Error in extractDesignData:", error);
+      throw error;
+    }
   },
 });
 
 console.log("BrandGuard AI Document Sandbox initialized");
+console.log("BrandGuard: API exposed - extractDesignData() is ready");

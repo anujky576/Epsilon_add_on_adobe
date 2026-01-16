@@ -30,6 +30,7 @@ import autofixRoutes from "./routes/autofix.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 import reportRoutes from "./routes/report.routes.js";
 import executiveSummaryRoutes from "./routes/executiveSummary.routes.js";
+import userRoutes from "./routes/user.routes.js";
 
 // Utility imports
 import { errorResponse } from "./utils/response.js";
@@ -128,6 +129,7 @@ const createApp = () => {
   // API ROUTES
   // ---------------------------------------------------------------------------
   // All routes are prefixed with /api for clear separation
+  app.use("/api/user", userRoutes);
   app.use("/api/brandkit", brandKitRoutes);
   app.use("/api/design", designRoutes);
   app.use("/api/designs", designRoutes); // Alias for listing

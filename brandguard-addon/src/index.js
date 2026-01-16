@@ -27,6 +27,181 @@ let currentDesignId = null;
 let currentAnalysisId = null;
 let currentViolations = [];
 let brandKits = [];
+let currentUser = null;
+let uploadedDesignFile = null;
+
+// =============================================================================
+// AUTHENTICATION
+// =============================================================================
+
+function getStoredUser() {
+  try {
+    const userData = localStorage.getItem("brandguard_user");
+    if (userData) {
+      return JSON.parse(userData);
+    }
+  } catch (e) {
+    console.error("Failed to parse stored user:", e);
+  }
+  return null;
+}
+
+function storeUser(user) {
+  localStorage.setItem("brandguard_user", JSON.stringify(user));
+  currentUser = user;
+}
+
+function clearStoredUser() {
+  localStorage.removeItem("brandguard_user");
+  currentUser = null;
+}
+
+async function loginUser(email, name, organization) {
+  // First, try to find existing user or create new one
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/user/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, name, organization }),
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      return result.data.user;
+    }
+  } catch (e) {
+    console.log("Backend login not available, using local auth");
+  }
+
+  // Fallback: Create local user session
+  return {
+    _id: `local_${Date.now()}`,
+    email,
+    name,
+    organization,
+    isLocal: true,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+// Google OAuth Configuration
+const GOOGLE_CLIENT_ID = "257641320688-smsgtgm2v8eg9k44m97pvvt196s9mn01.apps.googleusercontent.com"; // Replace with your Google Client ID
+
+async function initGoogleAuth() {
+  // Load Google Identity Services script
+  return new Promise((resolve, reject) => {
+    if (window.google?.accounts) {
+      resolve();
+      return;
+    }
+    
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+async function handleGoogleSignIn() {
+  try {
+    await initGoogleAuth();
+    
+    // Use Google Identity Services
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleGoogleCredentialResponse,
+      auto_select: false,
+    });
+    
+    // Prompt user to sign in
+    google.accounts.id.prompt((notification) => {
+      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+        // Fallback: Use popup
+        google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: "email profile",
+          callback: async (response) => {
+            if (response.access_token) {
+              await fetchGoogleUserInfo(response.access_token);
+            }
+          },
+        }).requestAccessToken();
+      }
+    });
+  } catch (error) {
+    console.error("Google Sign-In error:", error);
+    // Fallback to simple email input for demo
+    const email = prompt("Enter your Google email:");
+    if (email && email.includes("@")) {
+      const name = email.split("@")[0];
+      const user = await loginUser(email, name, "");
+      user.authProvider = "google";
+      storeUser(user);
+      showUploadSection();
+    }
+  }
+}
+
+async function handleGoogleCredentialResponse(response) {
+  try {
+    // Decode JWT token to get user info
+    const payload = JSON.parse(atob(response.credential.split(".")[1]));
+    
+    const user = await loginUser(payload.email, payload.name, "");
+    user.authProvider = "google";
+    user.picture = payload.picture;
+    storeUser(user);
+    showUploadSection();
+  } catch (error) {
+    console.error("Error processing Google credential:", error);
+  }
+}
+
+async function fetchGoogleUserInfo(accessToken) {
+  try {
+    const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const data = await response.json();
+    
+    const user = await loginUser(data.email, data.name, "");
+    user.authProvider = "google";
+    user.picture = data.picture;
+    storeUser(user);
+    showUploadSection();
+  } catch (error) {
+    console.error("Error fetching Google user info:", error);
+  }
+}
+
+function showLoginSection() {
+  document.getElementById("loginSection").classList.remove("hidden");
+  document.getElementById("uploadSection").classList.add("hidden");
+  document.getElementById("resultsSection").classList.add("hidden");
+  document.getElementById("profileBtn").classList.add("hidden");
+}
+
+function showUploadSection() {
+  document.getElementById("loginSection").classList.add("hidden");
+  document.getElementById("uploadSection").classList.remove("hidden");
+  document.getElementById("resultsSection").classList.add("hidden");
+  document.getElementById("profileBtn").classList.remove("hidden");
+  document.getElementById("profileBtn").classList.add("flex");
+}
+
+function handleSignout() {
+  clearStoredUser();
+  showLoginSection();
+  // Reset state
+  currentBrandKitId = null;
+  currentBrandKit = null;
+  currentDesignId = null;
+  currentAnalysisId = null;
+  currentViolations = [];
+}
 
 // =============================================================================
 // API HELPER FUNCTIONS
@@ -72,9 +247,18 @@ async function loadBrandKits() {
     select.innerHTML = "";
 
     if (brandKits.length === 0) {
-      // Create default brand kit
-      const defaultKit = await createDefaultBrandKit();
-      brandKits = [defaultKit];
+      // No brand kits exist - prompt user to create one via dashboard
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No brand kits found - Create one in Dashboard";
+      select.appendChild(option);
+      
+      // Hide brand kit info and disable analyze button
+      document.getElementById("brandKitInfo").classList.add("hidden");
+      document.getElementById("analyzeBtn").disabled = true;
+      document.getElementById("analyzeBtn").classList.add("opacity-50", "cursor-not-allowed");
+      
+      return brandKits;
     }
 
     brandKits.forEach((kit, index) => {
@@ -86,6 +270,10 @@ async function loadBrandKits() {
       if (index === 0) option.selected = true;
       select.appendChild(option);
     });
+
+    // Enable analyze button
+    document.getElementById("analyzeBtn").disabled = false;
+    document.getElementById("analyzeBtn").classList.remove("opacity-50", "cursor-not-allowed");
 
     // Select first brand kit
     if (brandKits.length > 0) {
@@ -101,44 +289,8 @@ async function loadBrandKits() {
   }
 }
 
-async function createDefaultBrandKit() {
-  const defaultBrandKit = {
-    name: "Default Brand Kit",
-    description: "Auto-generated brand kit for governance",
-    colors: [
-      { name: "Primary", hex: "#6366f1", tolerance: 10, usage: "primary" },
-      { name: "Secondary", hex: "#0ea5e9", tolerance: 10, usage: "secondary" },
-      { name: "Background", hex: "#0f172a", tolerance: 5, usage: "background" },
-      { name: "Text", hex: "#f1f5f9", tolerance: 5, usage: "text" },
-      { name: "Accent", hex: "#f59e0b", tolerance: 10, usage: "accent" },
-    ],
-    fonts: [
-      { name: "Inter", usage: "heading", fallbacks: ["Roboto", "sans-serif"] },
-      { name: "Roboto", usage: "body", fallbacks: ["Arial", "sans-serif"] },
-    ],
-    logoRules: {
-      minWidth: 50,
-      minHeight: 50,
-      clearSpaceRatio: 0.1,
-    },
-    accessibilityRules: {
-      minContrastRatio: 4.5,
-      largeTextMinContrast: 3,
-      requireAltText: true,
-    },
-    toneRules: {
-      style: "professional",
-      bannedWords: ["cheap", "free", "guarantee", "spam"],
-    },
-  };
-
-  const { brandKit } = await apiRequest(
-    "/api/brandkit",
-    "POST",
-    defaultBrandKit
-  );
-  return brandKit;
-}
+// NOTE: Default brand kit creation removed - users should create brand kits via Dashboard
+// This ensures only real, user-uploaded brand kits are used for analysis
 
 function selectBrandKit(brandKitId) {
   const kit = brandKits.find((k) => k._id === brandKitId);
@@ -166,20 +318,137 @@ function selectBrandKit(brandKitId) {
 
 async function extractDesignData() {
   try {
-    const { runtime } = addOnUISdk.instance;
+    const sdk = addOnUISdk.instance;
+    
+    // If user uploaded a design file, include that info
+    let uploadedFileInfo = null;
+    if (uploadedDesignFile) {
+      uploadedFileInfo = {
+        name: uploadedDesignFile.name,
+        type: uploadedDesignFile.type,
+        size: uploadedDesignFile.size,
+      };
+    }
 
-    if (runtime?.apiProxy?.extractDesignData) {
-      console.log("Extracting design data from canvas...");
-      const designData = await runtime.apiProxy.extractDesignData();
-      console.log("Extracted:", designData);
+    // Try multiple ways to access the Document Sandbox API
+    let designData = null;
+    
+    // Method 1: runtime.apiProxy (preferred - Document Sandbox)
+    if (sdk.runtime?.apiProxy?.extractDesignData) {
+      console.log("Using runtime.apiProxy.extractDesignData...");
+      designData = await sdk.runtime.apiProxy.extractDesignData();
+    }
+    // Method 2: app.document API (direct canvas access)
+    else if (sdk.app?.document) {
+      console.log("Using app.document API for direct extraction...");
+      try {
+        const document = sdk.app.document;
+        const pages = document.pages;
+        const currentPage = pages.length > 0 ? pages[0] : null;
+        
+        if (currentPage) {
+          const artboards = currentPage.artboards || [];
+          const colorsUsed = new Set();
+          const fontsUsed = new Set();
+          const textContent = [];
+          const images = [];
+          
+          // Extract data from artboards
+          for (const artboard of artboards) {
+            // Extract text and typography
+            const textNodes = artboard.allChildren?.filter(node => node.type === 'text') || [];
+            for (const textNode of textNodes) {
+              if (textNode.text) {
+                textContent.push({
+                  text: textNode.text,
+                  fontSize: textNode.fontSize || 16,
+                  fontFamily: textNode.fontFamily || 'Unknown'
+                });
+                if (textNode.fontFamily) fontsUsed.add(textNode.fontFamily);
+              }
+              if (textNode.fill?.color) {
+                colorsUsed.add(textNode.fill.color);
+              }
+            }
+            
+            // Extract shapes and colors
+            const shapeNodes = artboard.allChildren?.filter(node => 
+              node.type === 'rectangle' || node.type === 'ellipse' || node.type === 'path'
+            ) || [];
+            for (const shape of shapeNodes) {
+              if (shape.fill?.color) colorsUsed.add(shape.fill.color);
+              if (shape.stroke?.color) colorsUsed.add(shape.stroke.color);
+            }
+            
+            // Extract images
+            const imageNodes = artboard.allChildren?.filter(node => node.type === 'image') || [];
+            for (const img of imageNodes) {
+              images.push({
+                width: img.width || 0,
+                height: img.height || 0,
+                url: img.href || null
+              });
+            }
+          }
+          
+          designData = {
+            canvasId: currentPage.id || `express_canvas_${Date.now()}`,
+            name: document.title || currentPage.name || "Current Design",
+            colorsUsed: Array.from(colorsUsed),
+            fontsUsed: Array.from(fontsUsed),
+            textContent: textContent,
+            images: images,
+            layout: artboards.length > 0 ? artboards[0].name : "standard",
+            backgroundColor: artboards[0]?.fill?.color || "#FFFFFF",
+            artboardCount: artboards.length
+          };
+          console.log("Extracted design data from app.document:", designData);
+        }
+      } catch (docError) {
+        console.error("Error accessing document API:", docError);
+      }
+    }
+    // Method 3: Direct runtime access (legacy)
+    else if (sdk.runtime?.extractDesignData) {
+      console.log("Using runtime.extractDesignData...");
+      designData = await sdk.runtime.extractDesignData();
+    }
+
+    if (designData) {
+      if (uploadedFileInfo) {
+        designData.uploadedFile = uploadedFileInfo;
+      }
+      console.log("Successfully extracted design data:", designData);
       return designData;
     } else {
-      console.warn("Document Sandbox not available, using fallback");
-      return getFallbackDesignData();
+      console.warn("Document Sandbox not available - using fallback data");
+      console.warn("⚠️ For full canvas extraction, ensure:");
+      console.warn("1. Add-on is running inside Adobe Express (not standalone)");
+      console.warn("2. code.js Document Sandbox is properly loaded");
+      console.warn("3. runtime.apiProxy.extractDesignData is exposed from code.js");
+      console.warn("SDK instance keys:", JSON.stringify(Object.keys(sdk)));
+      console.warn("SDK runtime keys:", sdk.runtime ? JSON.stringify(Object.keys(sdk.runtime)) : "undefined");
+      console.warn("SDK app keys:", sdk.app ? JSON.stringify(Object.keys(sdk.app)) : "undefined");
+      
+      const fallbackData = getFallbackDesignData();
+      if (uploadedFileInfo) {
+        fallbackData.uploadedFile = uploadedFileInfo;
+        fallbackData.name = uploadedFileInfo.name;
+      }
+      return fallbackData;
     }
   } catch (error) {
-    console.error("Extraction error:", error);
-    return getFallbackDesignData();
+    console.error("Fatal extraction error:", error);
+    const fallbackData = getFallbackDesignData();
+    if (uploadedDesignFile) {
+      fallbackData.uploadedFile = {
+        name: uploadedDesignFile.name,
+        type: uploadedDesignFile.type,
+        size: uploadedDesignFile.size,
+      };
+      fallbackData.name = uploadedDesignFile.name;
+    }
+    return fallbackData;
   }
 }
 
@@ -255,20 +524,20 @@ function updateScoreDisplay(score, scoreLabel, violations) {
   const scoreBadge = document.getElementById("scoreBadge");
   const badgeStyles = {
     excellent: {
-      bg: "bg-green-500/20",
-      text: "text-green-400",
+      bg: "bg-green-100",
+      text: "text-green-700",
       label: "Excellent",
     },
-    good: { bg: "bg-blue-500/20", text: "text-blue-400", label: "Good" },
+    good: { bg: "bg-blue-100", text: "text-blue-700", label: "Good" },
     needs_work: {
-      bg: "bg-yellow-500/20",
-      text: "text-yellow-400",
+      bg: "bg-amber-100",
+      text: "text-amber-700",
       label: "Needs Work",
     },
-    poor: { bg: "bg-red-500/20", text: "text-red-400", label: "Poor" },
+    poor: { bg: "bg-primary/10", text: "text-primary", label: "Critical" },
   };
   const style = badgeStyles[scoreLabel] || badgeStyles.needs_work;
-  scoreBadge.className = `text-xs px-2 py-0.5 rounded-full font-medium ${style.bg} ${style.text}`;
+  scoreBadge.className = `text-[9px] font-bold uppercase tracking-[0.15em] px-3 py-1 rounded-full ${style.bg} ${style.text}`;
   scoreBadge.textContent = style.label;
 
   // Update issue count
@@ -292,18 +561,18 @@ function updateCategoryScores(categoryScores) {
       const color =
         typeof score === "number"
           ? score >= 80
-            ? "text-green-400"
+            ? "text-green-600"
             : score >= 60
-            ? "text-yellow-400"
-            : "text-red-400"
-          : "text-slate-400";
+            ? "text-amber-600"
+            : "text-primary"
+          : "text-neutral-black/40";
 
       return `
       <div class="text-center">
-        <div class="text-lg font-bold ${color}">${
+        <div class="editorial-title text-2xl ${color}">${
         typeof score === "number" ? Math.round(score) : score
       }</div>
-        <div class="text-[10px] text-slate-500">${labels[i]}</div>
+        <div class="text-[8px] uppercase tracking-[0.15em] text-neutral-black/30">${labels[i]}</div>
       </div>
     `;
     })
@@ -327,19 +596,19 @@ function updateRiskScores(riskScores) {
 
       const color =
         risk.value > 60
-          ? "bg-red-500"
+          ? "bg-primary"
           : risk.value > 30
-          ? "bg-yellow-500"
+          ? "bg-amber-500"
           : "bg-green-500";
       barEl.className = `risk-bar h-full ${color} rounded-full`;
 
       const textColor =
         risk.value > 60
-          ? "text-red-400"
+          ? "text-primary"
           : risk.value > 30
-          ? "text-yellow-400"
-          : "text-green-400";
-      valueEl.className = `text-sm font-medium ${textColor}`;
+          ? "text-amber-600"
+          : "text-green-600";
+      valueEl.className = `text-[10px] font-bold uppercase tracking-[0.1em] ${textColor}`;
     }
   });
 }
@@ -358,10 +627,10 @@ function updateExecutiveInsight(summary, positives = []) {
         const positivesHtml = positives
           .map(
             (p) =>
-              `<span class="inline-block bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-[10px] mr-1 mt-1">✓ ${p}</span>`
+              `<span class="inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded text-[9px] uppercase tracking-[0.1em] mr-1 mt-2">✓ ${p}</span>`
           )
           .join("");
-        textEl.innerHTML += `<div class="mt-2">${positivesHtml}</div>`;
+        textEl.innerHTML += `<div class="mt-3">${positivesHtml}</div>`;
       }
     } else {
       // Generate fallback insight based on violations
@@ -398,10 +667,10 @@ function updateViolationsList(violations) {
 
   if (violations.length === 0) {
     issuesList.innerHTML = `
-      <div class="glass rounded-xl p-4 text-center">
-        <span class="text-3xl mb-2 block">✅</span>
-        <p class="text-green-400 font-medium">All checks passed!</p>
-        <p class="text-slate-400 text-xs mt-1">Your design follows brand guidelines</p>
+      <div class="card p-6 text-center">
+        <span class="material-symbols-outlined text-4xl text-green-500 mb-3 block">check_circle</span>
+        <p class="text-green-700 font-bold uppercase tracking-[0.1em] text-sm">All checks passed!</p>
+        <p class="text-neutral-black/40 text-xs mt-2">Your design follows brand guidelines</p>
       </div>
     `;
     return;
@@ -410,45 +679,41 @@ function updateViolationsList(violations) {
   violations.forEach((violation, index) => {
     const isCritical =
       violation.severity === "critical" || violation.severity === "high";
-    const bgColor = isCritical
-      ? "border-red-500/30 bg-red-500/5"
-      : "border-yellow-500/30 bg-yellow-500/5";
-    const iconColor = isCritical
-      ? "bg-red-500/20 text-red-400"
-      : "bg-yellow-500/20 text-yellow-400";
+    const borderColor = isCritical
+      ? "border-l-primary"
+      : "border-l-amber-500";
+    const iconBg = isCritical
+      ? "bg-primary/10 text-primary"
+      : "bg-amber-100 text-amber-600";
     const badgeColor = isCritical
-      ? "bg-red-500/20 text-red-400"
-      : "bg-yellow-500/20 text-yellow-400";
+      ? "bg-primary/10 text-primary"
+      : "bg-amber-100 text-amber-700";
     const badgeText = isCritical ? "CRITICAL" : "WARNING";
 
     const card = document.createElement("div");
-    card.className = `rounded-xl p-3 border ${bgColor}`;
+    card.className = `card p-4 border-l-4 ${borderColor}`;
     card.innerHTML = `
-      <div class="flex items-start justify-between mb-2">
-        <div class="flex items-center gap-2">
-          <div class="w-6 h-6 ${iconColor} rounded-full flex items-center justify-center">
-            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-            </svg>
+      <div class="flex items-start justify-between mb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 ${iconBg} rounded-full flex items-center justify-center">
+            <span class="material-symbols-outlined text-base">warning</span>
           </div>
-          <span class="font-medium text-sm text-white">${formatViolationType(
+          <span class="font-medium text-sm text-neutral-black">${formatViolationType(
             violation.type
           )}</span>
         </div>
-        <span class="text-[10px] ${badgeColor} px-2 py-0.5 rounded-full font-bold">${badgeText}</span>
+        <span class="text-[8px] ${badgeColor} px-2 py-1 rounded-full font-bold uppercase tracking-[0.1em]">${badgeText}</span>
       </div>
-      <p class="text-xs text-slate-400 mb-2">${violation.description}</p>
+      <p class="text-xs text-neutral-black/50 mb-3 font-light leading-relaxed">${violation.description}</p>
       <div class="flex items-center justify-between">
-        <span class="text-[10px] text-slate-500">${formatAffectedElement(
+        <span class="text-[9px] uppercase tracking-[0.1em] text-neutral-black/30">${formatAffectedElement(
           violation.affectedElement
         )}</span>
         ${
           violation.autoFixable
             ? `
-          <button data-index="${index}" class="autofix-btn text-[10px] bg-brand-primary/20 text-brand-primary px-2 py-1 rounded-lg font-medium hover:bg-brand-primary hover:text-white transition-colors flex items-center gap-1">
-            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-            </svg>
+          <button data-index="${index}" class="autofix-btn text-[9px] bg-primary/10 text-primary px-3 py-1.5 rounded-lg font-bold uppercase tracking-[0.1em] hover:bg-primary hover:text-white transition-all duration-500 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">auto_fix_high</span>
             Fix
           </button>
         `
@@ -519,16 +784,16 @@ async function handleAutoFix(e) {
   const originalHTML = btn.innerHTML;
 
   btn.innerHTML =
-    '<svg class="w-3 h-3 loading-spinner" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>';
+    '<span class="material-symbols-outlined text-sm loading-spinner">progress_activity</span>';
   btn.disabled = true;
 
   try {
     await applyAutoFix();
-    btn.innerHTML = "✓ Fixed";
-    btn.classList.add("bg-green-500/20", "text-green-400");
-    btn.classList.remove("bg-brand-primary/20", "text-brand-primary");
+    btn.innerHTML = '<span class="material-symbols-outlined text-sm">check</span> Fixed';
+    btn.classList.add("bg-green-100", "text-green-700");
+    btn.classList.remove("bg-primary/10", "text-primary");
   } catch (error) {
-    btn.innerHTML = "✕ Failed";
+    btn.innerHTML = '<span class="material-symbols-outlined text-sm">close</span> Failed';
     setTimeout(() => {
       btn.innerHTML = originalHTML;
       btn.disabled = false;
@@ -545,6 +810,7 @@ addOnUISdk.ready.then(() => {
   console.log(`📡 Backend: ${API_BASE_URL}`);
 
   // DOM Elements
+  const loginSection = document.getElementById("loginSection");
   const uploadSection = document.getElementById("uploadSection");
   const resultsSection = document.getElementById("resultsSection");
   const analyzeBtn = document.getElementById("analyzeBtn");
@@ -554,22 +820,155 @@ addOnUISdk.ready.then(() => {
   const dropZone = document.getElementById("dropZone");
   const fileInput = document.getElementById("fileInput");
   const backendStatus = document.getElementById("backendStatus");
+  const signoutBtn = document.getElementById("signoutBtn");
+  const profileBtn = document.getElementById("profileBtn");
+  const loginBtn = document.getElementById("loginBtn");
+  const loginEmail = document.getElementById("loginEmail");
+  const loginName = document.getElementById("loginName");
+  const loginOrg = document.getElementById("loginOrg");
+  const loginError = document.getElementById("loginError");
+
+  // Check for existing session
+  const storedUser = getStoredUser();
+  if (storedUser) {
+    currentUser = storedUser;
+    showUploadSection();
+  } else {
+    showLoginSection();
+  }
+
+  // Login handler
+  loginBtn.addEventListener("click", async () => {
+    const email = loginEmail.value.trim();
+    const name = loginName.value.trim();
+    const org = loginOrg.value.trim();
+
+    // Validation
+    if (!email || !name) {
+      loginError.textContent = "Please enter your email and name";
+      loginError.classList.remove("hidden");
+      return;
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      loginError.textContent = "Please enter a valid email address";
+      loginError.classList.remove("hidden");
+      return;
+    }
+
+    loginError.classList.add("hidden");
+    loginBtn.disabled = true;
+    loginBtn.innerHTML =
+      '<span class="material-symbols-outlined loading-spinner text-base">progress_activity</span> Signing in...';
+
+    try {
+      const user = await loginUser(email, name, org);
+      storeUser(user);
+      showUploadSection();
+    } catch (error) {
+      loginError.textContent = "Login failed. Please try again.";
+      loginError.classList.remove("hidden");
+    } finally {
+      loginBtn.disabled = false;
+      loginBtn.innerHTML =
+        '<span class="material-symbols-outlined">login</span> Sign In';
+    }
+  });
+
+  // Allow Enter key to submit login
+  [loginEmail, loginName, loginOrg].forEach((input) => {
+    input.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        loginBtn.click();
+      }
+    });
+  });
+
+  // Google Sign-In handler
+  const googleSignInBtn = document.getElementById("googleSignInBtn");
+  googleSignInBtn.addEventListener("click", async () => {
+    googleSignInBtn.disabled = true;
+    googleSignInBtn.innerHTML =
+      '<span class="material-symbols-outlined loading-spinner text-base">progress_activity</span> Connecting...';
+    
+    try {
+      await handleGoogleSignIn();
+    } catch (error) {
+      loginError.textContent = "Google Sign-In failed. Please try again.";
+      loginError.classList.remove("hidden");
+    } finally {
+      googleSignInBtn.disabled = false;
+      googleSignInBtn.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Continue with Google
+      `;
+    }
+  });
+
+  // Signout handler
+  signoutBtn.addEventListener("click", handleSignout);
+
+  // Profile dropdown elements
+  const profileDropdown = document.getElementById("profileDropdown");
+  const profileSignoutBtn = document.getElementById("profileSignoutBtn");
+  const profileName = document.getElementById("profileName");
+  const profileEmail = document.getElementById("profileEmail");
+  const profileOrg = document.getElementById("profileOrg");
+  const profileOrgName = document.getElementById("profileOrgName");
+
+  // Profile button click - toggle dropdown
+  profileBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (currentUser) {
+      // Update profile info
+      profileName.textContent = currentUser.name || "User";
+      profileEmail.textContent = currentUser.email || "";
+      if (currentUser.organization) {
+        profileOrg.classList.remove("hidden");
+        profileOrgName.textContent = currentUser.organization;
+      } else {
+        profileOrg.classList.add("hidden");
+      }
+      // Toggle dropdown
+      profileDropdown.classList.toggle("hidden");
+    }
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!profileDropdown.contains(e.target) && !profileBtn.contains(e.target)) {
+      profileDropdown.classList.add("hidden");
+    }
+  });
+
+  // Profile signout button
+  profileSignoutBtn.addEventListener("click", () => {
+    profileDropdown.classList.add("hidden");
+    handleSignout();
+  });
 
   // Check backend health
   fetch(`${API_BASE_URL}/health`)
     .then((res) => res.json())
     .then((data) => {
       if (data.success) {
-        backendStatus.textContent = "Connected";
+        backendStatus.innerHTML = '<span class="material-symbols-outlined text-sm">check_circle</span>';
         backendStatus.className =
-          "text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400";
-        loadBrandKits();
+          "w-6 h-6 flex items-center justify-center rounded-full bg-green-100 text-green-600";
+        if (currentUser) {
+          loadBrandKits();
+        }
       }
     })
     .catch(() => {
       backendStatus.textContent = "Offline";
       backendStatus.className =
-        "text-xs px-2 py-1 rounded-full bg-red-500/20 text-red-400";
+        "text-[9px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 rounded-full bg-primary/10 text-primary";
     });
 
   // Brand kit selection
@@ -587,28 +986,31 @@ addOnUISdk.ready.then(() => {
     currentDesignId = null;
     currentAnalysisId = null;
     currentViolations = [];
+    // Reset uploaded file
+    uploadedDesignFile = null;
+    fileInput.value = "";
+    document.getElementById("uploadedFilePreview")?.classList.add("hidden");
+    dropZone.classList.remove("hidden");
   });
 
   // Auto-fix all
   autoFixAllBtn?.addEventListener("click", async () => {
     autoFixAllBtn.disabled = true;
     autoFixAllBtn.innerHTML =
-      '<svg class="w-4 h-4 loading-spinner" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle></svg> Fixing...';
+      '<span class="material-symbols-outlined loading-spinner text-base">progress_activity</span> Fixing...';
 
     try {
       await applyAutoFix();
-      autoFixAllBtn.innerHTML = "✓ All Fixed";
-      autoFixAllBtn.classList.remove(
-        "from-brand-primary",
-        "to-brand-secondary"
-      );
-      autoFixAllBtn.classList.add("bg-green-500");
+      autoFixAllBtn.innerHTML = '<span class="material-symbols-outlined text-base">check_circle</span> All Fixed';
+      autoFixAllBtn.classList.remove("bg-primary");
+      autoFixAllBtn.classList.add("bg-green-600");
     } catch (error) {
       autoFixAllBtn.innerHTML = "Fix Failed";
     }
   });
 
-  // Drag and drop
+  // Drag and drop - upload file only, don't auto-analyze
+
   ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
     dropZone.addEventListener(
       eventName,
@@ -620,19 +1022,69 @@ addOnUISdk.ready.then(() => {
     );
   });
 
+  // Visual feedback for drag
+  dropZone.addEventListener("dragenter", () => {
+    dropZone.classList.add("border-primary", "bg-primary/5");
+  });
+  dropZone.addEventListener("dragleave", () => {
+    dropZone.classList.remove("border-primary", "bg-primary/5");
+  });
+  dropZone.addEventListener("drop", () => {
+    dropZone.classList.remove("border-primary", "bg-primary/5");
+  });
+
   dropZone.addEventListener("drop", (e) => {
     const files = e.dataTransfer.files;
-    if (files.length > 0) runFullAnalysis();
+    if (files.length > 0) {
+      handleFileUpload(files[0]);
+    }
   });
 
   dropZone.addEventListener("click", () => fileInput.click());
   fileInput.addEventListener("change", () => {
-    if (fileInput.files.length > 0) runFullAnalysis();
+    if (fileInput.files.length > 0) {
+      handleFileUpload(fileInput.files[0]);
+    }
+  });
+
+  // Handle file upload - just store and preview, don't analyze
+  function handleFileUpload(file) {
+    uploadedDesignFile = file;
+    
+    // Show file preview
+    const preview = document.getElementById("uploadedFilePreview");
+    const fileName = document.getElementById("uploadedFileName");
+    const fileSize = document.getElementById("uploadedFileSize");
+    
+    if (preview && fileName && fileSize) {
+      fileName.textContent = file.name;
+      fileSize.textContent = formatFileSize(file.size);
+      preview.classList.remove("hidden");
+      dropZone.classList.add("hidden");
+    }
+    
+    console.log("Design file uploaded:", file.name, file.type);
+  }
+
+  // Format file size
+  function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  }
+
+  // Remove file button
+  const removeFileBtn = document.getElementById("removeFileBtn");
+  removeFileBtn?.addEventListener("click", () => {
+    uploadedDesignFile = null;
+    fileInput.value = "";
+    document.getElementById("uploadedFilePreview")?.classList.add("hidden");
+    dropZone.classList.remove("hidden");
   });
 
   async function runFullAnalysis() {
     analyzeBtn.innerHTML =
-      '<svg class="w-5 h-5 loading-spinner" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Analyzing...';
+      '<span class="material-symbols-outlined loading-spinner">progress_activity</span> Analyzing...';
     analyzeBtn.disabled = true;
 
     try {
@@ -658,7 +1110,7 @@ addOnUISdk.ready.then(() => {
       alert("Analysis failed. Ensure backend is running at " + API_BASE_URL);
     } finally {
       analyzeBtn.innerHTML =
-        '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg> Analyze Current Design';
+        '<span class="material-symbols-outlined">bolt</span> Analyze Design';
       analyzeBtn.disabled = false;
     }
   }
@@ -694,6 +1146,9 @@ addOnUISdk.ready.then(() => {
   function showResults(analysisResult, riskScores) {
     uploadSection.classList.add("hidden");
     resultsSection.classList.remove("hidden");
+    // Keep profile button visible
+    document.getElementById("profileBtn").classList.remove("hidden");
+    document.getElementById("profileBtn").classList.add("flex");
 
     updateScoreDisplay(
       analysisResult.complianceScore,

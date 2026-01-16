@@ -1,31 +1,33 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="light">
   <head>
     <meta charset="UTF-8" />
     <meta
       name="description"
-      content="BrandGuard AI - Enterprise Brand Governance Add-on"
+      content="Epsilon - Brand Agency AI Add-on"
     />
     <meta
       name="keywords"
-      content="Adobe, Express, Add-On, BrandGuard, AI, Brand Governance"
+      content="Adobe, Express, Add-On, Epsilon, AI, Brand Governance"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://cdn.tailwindcss.com"></script>
-    <title>BrandGuard AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0" rel="stylesheet" />
+    <title>Epsilon | Brand AI</title>
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
-              brand: {
-                primary: "#6366f1",
-                secondary: "#0ea5e9",
-                light: "#eef2ff",
-                dark: "#1e1b4b",
-                cream: "#f8fafc",
-                gold: "#f59e0b",
-              },
+              primary: "#bb0027",
+              "primary-hover": "#90001e",
+              base: "#f2f2f2",
+              "neutral-black": "#141414",
+            },
+            fontFamily: {
+              display: ["Bebas Neue", "sans-serif"],
+              sans: ["Inter", "sans-serif"],
             },
           },
         },
@@ -36,27 +38,48 @@
         box-sizing: border-box;
       }
       body {
-        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
-          Roboto, sans-serif;
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-        color: #f1f5f9;
+        font-family: "Inter", sans-serif;
+        background: #f2f2f2;
+        color: #141414;
         margin: 0;
         padding: 0;
+        -webkit-font-smoothing: antialiased;
+      }
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+      }
+      .editorial-title {
+        font-family: 'Bebas Neue', sans-serif;
+        line-height: 0.95;
+        letter-spacing: 0.01em;
       }
       .scrollbar-thin::-webkit-scrollbar {
         width: 4px;
       }
       .scrollbar-thin::-webkit-scrollbar-track {
-        background: #1e293b;
+        background: #f2f2f2;
       }
       .scrollbar-thin::-webkit-scrollbar-thumb {
-        background: #6366f1;
+        background: rgba(187, 0, 39, 0.2);
         border-radius: 4px;
       }
+      .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+        background: #bb0027;
+      }
       .glass {
-        background: rgba(30, 41, 59, 0.8);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(99, 102, 241, 0.2);
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(20px);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+      }
+      .card {
+        background: white;
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        border-radius: 1.5rem;
+        transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .card:hover {
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.04);
+        transform: translateY(-2px);
       }
       .score-ring {
         transform: rotate(-90deg);
@@ -69,38 +92,70 @@
           transform: rotate(360deg);
         }
       }
+      @keyframes reveal {
+        from { transform: translateY(15px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      .animate-reveal {
+        animation: reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
       .risk-bar {
-        transition: width 0.5s ease;
+        transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .outline-text {
+        -webkit-text-stroke: 1px rgba(20, 20, 20, 0.15);
+        color: transparent;
       }
     </style>
   </head>
-  <body class="bg-slate-900">
+  <body class="bg-base">
     <!-- Header -->
     <div
       class="glass px-4 py-3 flex items-center justify-between sticky top-0 z-50"
     >
-      <div class="flex items-center gap-2">
-        <div
-          class="w-8 h-8 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-lg flex items-center justify-center shadow-lg shadow-brand-primary/30"
-        >
-          <svg
-            class="w-5 h-5 text-white"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-        <span
-          class="font-bold text-brand-primary text-lg bg-gradient-to-r from-brand-primary to-brand-secondary bg-clip-text text-transparent"
-          >BrandGuard AI</span
-        >
+      <div class="flex items-center gap-3">
+        <!-- <img src="assets/epsilon-logo.png" alt="Epsilon" class="w-8 h-8 object-contain" /> -->
+        <span class="font-display text-xl text-primary tracking-wide">EPSILON</span>
       </div>
-      <span
-        id="backendStatus"
-        class="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-400"
-        >Connecting...</span
-      >
+      <div class="flex items-center gap-2">
+        <span
+          id="backendStatus"
+          class="text-[9px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 rounded-full bg-primary/10 text-primary/60"
+          >Connecting...</span
+        >
+        <div class="relative">
+          <button
+            id="profileBtn"
+            class="hidden w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center hover:bg-primary/20 transition-all duration-500"
+            title="Profile"
+          >
+            <span class="material-symbols-outlined text-lg text-primary">person</span>
+          </button>
+          <!-- Profile Dropdown -->
+          <div id="profileDropdown" class="hidden absolute right-0 top-10 w-56 bg-white rounded-xl shadow-lg border border-black/[0.06] p-4 z-50">
+            <div class="flex items-center gap-3 mb-3 pb-3 border-b border-black/[0.04]">
+              <div class="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                <span class="material-symbols-outlined text-primary">person</span>
+              </div>
+              <div class="overflow-hidden">
+                <p id="profileName" class="text-sm font-medium text-neutral-black truncate">User</p>
+                <p id="profileEmail" class="text-[10px] text-neutral-black/40 truncate">email@example.com</p>
+              </div>
+            </div>
+            <p id="profileOrg" class="text-[10px] text-neutral-black/40 mb-3 hidden">
+              <span class="material-symbols-outlined text-xs align-middle mr-1">business</span>
+              <span id="profileOrgName">Organization</span>
+            </p>
+            <button
+              id="profileSignoutBtn"
+              class="w-full bg-base hover:bg-primary/10 text-neutral-black/60 hover:text-primary py-2 rounded-lg font-bold uppercase tracking-[0.1em] text-[9px] transition-all duration-300 flex items-center justify-center gap-2"
+            >
+              <span class="material-symbols-outlined text-sm">logout</span>
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Main Content -->
@@ -108,27 +163,98 @@
       class="p-4 overflow-y-auto scrollbar-thin"
       style="height: calc(100vh - 56px)"
     >
+      <!-- Login Section -->
+      <div id="loginSection">
+        <div class="flex flex-col items-center justify-center min-h-[400px]">
+          <img src="assets/epsilon-logo.png" alt="Epsilon" class="w-32 h-32 object-contain animate-reveal" />
+          <!-- <h1 class="editorial-title text-5xl text-primary mb-1 animate-reveal" style="animation-delay: 100ms">EPSILON</h1> -->
+          <!-- <h2 class="editorial-title text-3xl outline-text mb-4 animate-reveal" style="animation-delay: 150ms">INTELLIGENCE</h2> -->
+          <p class="text-neutral-black/40 text-sm mb-8 text-center font-light animate-reveal" style="animation-delay: 200ms">Sign in to analyze your brand designs</p>
+          
+          <div class="w-full max-w-sm space-y-4 animate-reveal" style="animation-delay: 300ms">
+            <div>
+              <label class="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-black/40 block mb-2">Email</label>
+              <input
+                type="email"
+                id="loginEmail"
+                placeholder="your@email.com"
+                class="w-full px-4 py-3 bg-white border border-black/[0.04] rounded-xl text-sm focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-primary/20 text-neutral-black placeholder-neutral-black/30 transition-all duration-500"
+              />
+            </div>
+            <div>
+              <label class="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-black/40 block mb-2">Name</label>
+              <input
+                type="text"
+                id="loginName"
+                placeholder="Your Name"
+                class="w-full px-4 py-3 bg-white border border-black/[0.04] rounded-xl text-sm focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-primary/20 text-neutral-black placeholder-neutral-black/30 transition-all duration-500"
+              />
+            </div>
+            <div>
+              <label class="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-black/40 block mb-2">Organization (Optional)</label>
+              <input
+                type="text"
+                id="loginOrg"
+                placeholder="Company Name"
+                class="w-full px-4 py-3 bg-white border border-black/[0.04] rounded-xl text-sm focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-primary/20 text-neutral-black placeholder-neutral-black/30 transition-all duration-500"
+              />
+            </div>
+            <button
+              id="loginBtn"
+              class="px-8 bg-primary hover:bg-primary-hover text-white py-2.5 rounded-lg font-bold uppercase tracking-[0.1em] text-xs transition-all duration-500 flex items-center justify-center gap-2 mt-6 mx-auto"
+            >
+              <span class="material-symbols-outlined text-base">login</span>
+              Sign In
+            </button>
+            
+            <div class="flex items-center gap-4 my-4">
+              <div class="flex-1 h-[1px] bg-black/[0.06]"></div>
+              <span class="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-black/30">Or</span>
+              <div class="flex-1 h-[1px] bg-black/[0.06]"></div>
+            </div>
+            
+            <button
+              id="googleSignInBtn"
+              class="w-full bg-white border border-black/[0.08] text-neutral-black/70 py-2.5 rounded-lg font-medium text-xs transition-all duration-500 flex items-center justify-center gap-3 hover:border-black/20 hover:shadow-sm"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Continue with Google
+            </button>
+            <p id="loginError" class="text-primary text-xs text-center hidden font-medium"></p>
+          </div>
+          
+          <div class="mt-10 text-center animate-reveal" style="animation-delay: 400ms">
+            <p class="text-neutral-black/20 text-[9px] uppercase tracking-[0.2em]">By signing in, you agree to our Terms of Service</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Upload Section (Initial State) -->
-      <div id="uploadSection">
-        <h2 class="text-xl font-bold text-white mb-1">Design Analyzer</h2>
-        <p class="text-slate-400 text-sm mb-4">
-          Analyze your design against brand guidelines
-        </p>
+      <div id="uploadSection" class="hidden">
+        <div class="mb-6 border-b border-black/[0.04] pb-4">
+          <span class="text-[9px] font-bold uppercase tracking-[0.3em] text-primary/60 mb-2 block">Design Audit</span>
+          <h2 class="editorial-title text-2xl text-neutral-black">Analyze Design</h2>
+        </div>
 
         <!-- Brand Kit Selection -->
-        <div class="mb-4">
+        <div class="mb-6">
           <label
-            class="text-xs text-slate-400 font-medium flex items-center gap-2"
+            class="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-black/40 flex items-center gap-2 mb-2"
           >
-            <span>🎨</span> SELECT BRAND KIT
+            <span class="material-symbols-outlined text-sm">palette</span> Select Brand Kit
           </label>
           <select
             id="brandKitSelect"
-            class="w-full mt-1 px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-lg text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary text-white"
+            class="w-full px-4 py-3 bg-white border border-black/[0.04] rounded-xl text-sm focus:outline-none focus:border-primary/30 text-neutral-black transition-all duration-500"
           >
             <option value="">Loading brand kits...</option>
           </select>
-          <div id="brandKitInfo" class="mt-2 text-xs text-slate-500 hidden">
+          <div id="brandKitInfo" class="mt-2 text-[9px] uppercase tracking-[0.15em] text-neutral-black/30 hidden">
             <span id="brandKitVersion">v1</span> •
             <span id="brandKitColors">0</span> colors •
             <span id="brandKitFonts">0</span> fonts
@@ -138,83 +264,87 @@
         <!-- Analyze Current Design Button -->
         <button
           id="analyzeBtn"
-          class="w-full bg-gradient-to-r from-brand-primary to-brand-secondary hover:from-brand-primary hover:to-purple-500 text-white py-3.5 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-brand-primary/30 hover:shadow-brand-primary/50"
+          class="px-8 bg-primary hover:bg-primary-hover text-white py-3 rounded-lg font-bold uppercase tracking-[0.1em] text-xs transition-all duration-500 flex items-center justify-center gap-2 mx-auto"
         >
-          <svg
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-            ></path>
-          </svg>
-          Analyze Current Design
+          <span class="material-symbols-outlined text-base">bolt</span>
+          Analyze Design
         </button>
 
         <!-- Drop Zone -->
-        <div class="flex items-center gap-3 my-4">
-          <div class="flex-1 h-px bg-slate-700"></div>
-          <span class="text-slate-500 text-xs">OR UPLOAD FILE</span>
-          <div class="flex-1 h-px bg-slate-700"></div>
+        <div class="flex items-center gap-4 my-6">
+          <div class="flex-1 h-[1px] bg-black/[0.06]"></div>
+          <span class="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-black/30">Or Upload Design</span>
+          <div class="flex-1 h-[1px] bg-black/[0.06]"></div>
         </div>
 
         <div
           id="dropZone"
-          class="border-2 border-dashed border-slate-600 rounded-xl p-5 text-center cursor-pointer transition-all duration-200 hover:border-brand-primary hover:bg-slate-800/50"
+          class="card p-8 text-center cursor-pointer hover:border-primary/20"
         >
-          <div class="flex flex-col items-center gap-2">
+          <div class="flex flex-col items-center gap-3">
             <div
-              class="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center"
+              class="w-14 h-14 bg-base rounded-full flex items-center justify-center"
             >
-              <svg
-                class="w-5 h-5 text-brand-primary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                ></path>
-              </svg>
+              <span class="material-symbols-outlined text-2xl text-primary/40">cloud_upload</span>
             </div>
-            <p class="text-slate-300 font-medium text-sm">Drag & drop files</p>
-            <p class="text-slate-500 text-xs">PNG, JPG, SVG, PDF</p>
+            <p class="text-neutral-black/60 font-medium text-sm">Drag & drop design file</p>
+            <p class="text-[9px] uppercase tracking-[0.2em] text-neutral-black/30">PNG, JPG, SVG, PDF</p>
             <input
               type="file"
               id="fileInput"
               class="hidden"
-              multiple
               accept="image/*,.pdf,.svg"
             />
           </div>
+        </div>
+
+        <!-- Uploaded File Preview -->
+        <div id="uploadedFilePreview" class="mt-4 card p-4 hidden">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                <span class="material-symbols-outlined text-primary">image</span>
+              </div>
+              <div>
+                <p id="uploadedFileName" class="text-sm font-medium text-neutral-black">file.png</p>
+                <p id="uploadedFileSize" class="text-[10px] text-neutral-black/40">0 KB</p>
+              </div>
+            </div>
+            <button id="removeFileBtn" class="text-neutral-black/30 hover:text-primary transition-colors">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sign Out Button at Bottom -->
+        <div class="mt-auto pt-8">
+          <button
+            id="signoutBtn"
+            class="w-full bg-white border border-black/[0.06] text-neutral-black/50 py-3 rounded-xl font-bold uppercase tracking-[0.1em] text-[10px] hover:border-primary/20 hover:text-primary transition-all duration-500 flex items-center justify-center gap-2"
+          >
+            <span class="material-symbols-outlined text-base">logout</span>
+            Sign Out
+          </button>
         </div>
       </div>
 
       <!-- Analysis Results Section (Hidden Initially) -->
       <div id="resultsSection" class="hidden">
         <!-- Score Card -->
-        <div class="glass rounded-2xl p-4 mb-4">
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-xs text-slate-400 font-medium tracking-wider"
-              >COMPLIANCE SCORE</span
+        <div class="card p-6 mb-4">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-[9px] font-bold uppercase tracking-[0.3em] text-neutral-black/40"
+              >Compliance Score</span
             >
             <span
               id="scoreBadge"
-              class="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-medium"
+              class="text-[9px] font-bold uppercase tracking-[0.15em] px-3 py-1 rounded-full bg-primary/10 text-primary"
               >Analyzing</span
             >
           </div>
 
           <!-- Score Gauge -->
-          <div class="flex items-center justify-center py-4">
+          <div class="flex items-center justify-center py-6">
             <div class="relative" style="width: 140px; height: 140px">
               <svg class="score-ring" width="140" height="140">
                 <circle
@@ -222,7 +352,7 @@
                   cy="70"
                   r="60"
                   fill="none"
-                  stroke="#334155"
+                  stroke="#e5e5e5"
                   stroke-width="10"
                 />
                 <circle
@@ -231,75 +361,63 @@
                   cy="70"
                   r="60"
                   fill="none"
-                  stroke="url(#gradient)"
+                  stroke="#bb0027"
                   stroke-width="10"
                   stroke-linecap="round"
                   stroke-dasharray="377"
                   stroke-dashoffset="377"
                 />
-                <defs>
-                  <linearGradient
-                    id="gradient"
-                    x1="0%"
-                    y1="0%"
-                    x2="100%"
-                    y2="0%"
-                  >
-                    <stop offset="0%" stop-color="#6366f1" />
-                    <stop offset="100%" stop-color="#0ea5e9" />
-                  </linearGradient>
-                </defs>
               </svg>
               <div
                 class="absolute inset-0 flex flex-col items-center justify-center"
               >
-                <span id="scoreValue" class="text-4xl font-bold text-white"
+                <span id="scoreValue" class="editorial-title text-5xl text-neutral-black"
                   >--</span
                 >
-                <span class="text-xs text-slate-400">/ 100</span>
+                <span class="text-[9px] uppercase tracking-[0.2em] text-neutral-black/30">/ 100</span>
               </div>
             </div>
           </div>
 
           <!-- Category Scores -->
-          <div id="categoryScores" class="grid grid-cols-5 gap-2 mt-2">
+          <div id="categoryScores" class="grid grid-cols-5 gap-2 mt-4 pt-4 border-t border-black/[0.04]">
             <div class="text-center">
-              <div class="text-lg font-bold text-slate-300">--</div>
-              <div class="text-[10px] text-slate-500">Color</div>
+              <div class="editorial-title text-2xl text-neutral-black/60">--</div>
+              <div class="text-[8px] uppercase tracking-[0.15em] text-neutral-black/30">Color</div>
             </div>
             <div class="text-center">
-              <div class="text-lg font-bold text-slate-300">--</div>
-              <div class="text-[10px] text-slate-500">Type</div>
+              <div class="editorial-title text-2xl text-neutral-black/60">--</div>
+              <div class="text-[8px] uppercase tracking-[0.15em] text-neutral-black/30">Type</div>
             </div>
             <div class="text-center">
-              <div class="text-lg font-bold text-slate-300">--</div>
-              <div class="text-[10px] text-slate-500">Logo</div>
+              <div class="editorial-title text-2xl text-neutral-black/60">--</div>
+              <div class="text-[8px] uppercase tracking-[0.15em] text-neutral-black/30">Logo</div>
             </div>
             <div class="text-center">
-              <div class="text-lg font-bold text-slate-300">--</div>
-              <div class="text-[10px] text-slate-500">A11y</div>
+              <div class="editorial-title text-2xl text-neutral-black/60">--</div>
+              <div class="text-[8px] uppercase tracking-[0.15em] text-neutral-black/30">A11y</div>
             </div>
             <div class="text-center">
-              <div class="text-lg font-bold text-slate-300">--</div>
-              <div class="text-[10px] text-slate-500">Tone</div>
+              <div class="editorial-title text-2xl text-neutral-black/60">--</div>
+              <div class="text-[8px] uppercase tracking-[0.15em] text-neutral-black/30">Tone</div>
             </div>
           </div>
         </div>
 
         <!-- Risk Assessment -->
-        <div class="glass rounded-2xl p-4 mb-4">
-          <h3 class="text-xs text-slate-400 font-medium tracking-wider mb-3">
-            RISK ASSESSMENT
+        <div class="card p-6 mb-4">
+          <h3 class="text-[9px] font-bold uppercase tracking-[0.3em] text-neutral-black/40 mb-4">
+            Risk Assessment
           </h3>
-          <div class="space-y-3">
+          <div class="space-y-4">
             <div>
-              <div class="flex justify-between items-center mb-1">
-                <span class="text-sm text-slate-300">Brand Risk</span>
-                <span id="brandRisk" class="text-sm font-medium text-green-400"
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-sm text-neutral-black/60">Brand Risk</span>
+                <span id="brandRisk" class="text-[10px] font-bold uppercase tracking-[0.1em] text-green-600"
                   >0%</span
                 >
               </div>
-              <div class="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+              <div class="h-1 bg-base rounded-full overflow-hidden">
                 <div
                   id="brandRiskBar"
                   class="risk-bar h-full bg-green-500 rounded-full"
@@ -308,15 +426,15 @@
               </div>
             </div>
             <div>
-              <div class="flex justify-between items-center mb-1">
-                <span class="text-sm text-slate-300">Accessibility Risk</span>
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-sm text-neutral-black/60">Accessibility Risk</span>
                 <span
                   id="accessibilityRisk"
-                  class="text-sm font-medium text-green-400"
+                  class="text-[10px] font-bold uppercase tracking-[0.1em] text-green-600"
                   >0%</span
                 >
               </div>
-              <div class="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+              <div class="h-1 bg-base rounded-full overflow-hidden">
                 <div
                   id="accessibilityRiskBar"
                   class="risk-bar h-full bg-green-500 rounded-full"
@@ -325,13 +443,13 @@
               </div>
             </div>
             <div>
-              <div class="flex justify-between items-center mb-1">
-                <span class="text-sm text-slate-300">Legal Risk</span>
-                <span id="legalRisk" class="text-sm font-medium text-green-400"
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-sm text-neutral-black/60">Legal Risk</span>
+                <span id="legalRisk" class="text-[10px] font-bold uppercase tracking-[0.1em] text-green-600"
                   >0%</span
                 >
               </div>
-              <div class="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+              <div class="h-1 bg-base rounded-full overflow-hidden">
                 <div
                   id="legalRiskBar"
                   class="risk-bar h-full bg-green-500 rounded-full"
@@ -345,63 +463,47 @@
         <!-- Executive Insight -->
         <div
           id="executiveInsight"
-          class="glass rounded-2xl p-4 mb-4 hidden border-l-4 border-brand-primary"
+          class="card p-6 mb-4 hidden border-l-4 border-primary"
         >
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-lg">💡</span>
-            <h3 class="text-sm font-semibold text-white">Executive Insight</h3>
+          <div class="flex items-center gap-3 mb-3">
+            <span class="material-symbols-outlined text-primary">lightbulb</span>
+            <h3 class="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-black/60">Executive Insight</h3>
           </div>
           <p
             id="insightText"
-            class="text-sm text-slate-300 leading-relaxed"
+            class="text-sm text-neutral-black/60 leading-relaxed font-light"
           ></p>
         </div>
 
         <!-- Detected Issues -->
         <div class="mb-4">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="font-semibold text-white flex items-center gap-2">
-              <span>⚠️</span> Detected Issues
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-black/60 flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm text-primary">warning</span> Detected Issues
               <span
                 id="issueCount"
-                class="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full"
+                class="text-[9px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold"
                 >0</span
               >
             </h3>
           </div>
-          <div class="space-y-2" id="issuesList"></div>
+          <div class="space-y-3" id="issuesList"></div>
         </div>
 
         <!-- Action Buttons -->
-        <div class="flex gap-2 mt-4">
+        <div class="flex gap-3 mt-6">
           <button
             id="reAnalyzeBtn"
-            class="flex-1 bg-slate-800 border border-slate-600 text-slate-300 py-2.5 rounded-xl font-medium hover:bg-slate-700 transition-colors text-sm flex items-center justify-center gap-1"
+            class="flex-1 bg-white border border-black/[0.06] text-neutral-black/60 py-3 rounded-xl font-bold uppercase tracking-[0.1em] text-[10px] hover:border-primary/20 hover:text-primary transition-all duration-500 flex items-center justify-center gap-2"
           >
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
+            <span class="material-symbols-outlined text-base">refresh</span>
             Re-Analyze
           </button>
           <button
             id="autoFixAllBtn"
-            class="flex-1 bg-gradient-to-r from-brand-primary to-brand-secondary text-white py-2.5 rounded-xl font-medium hover:opacity-90 transition-all text-sm flex items-center justify-center gap-1 shadow-lg shadow-brand-primary/30"
+            class="flex-1 bg-primary hover:bg-primary-hover text-white py-3 rounded-xl font-bold uppercase tracking-[0.1em] text-[10px] transition-all duration-500 flex items-center justify-center gap-2"
           >
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
-              />
-            </svg>
+            <span class="material-symbols-outlined text-base">auto_fix_high</span>
             Auto-Fix All
           </button>
         </div>

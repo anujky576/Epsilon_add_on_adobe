@@ -194,7 +194,16 @@ REQUIRED OUTPUT (JSON ONLY)
     "accessibility": number,
     "tone": number
   },
-  "violations": [],
+  "violations": [
+    {
+      "type": "color | font | typography | logo | accessibility | tone | other",
+      "severity": "critical | high | medium | low",
+      "description": "Clear description of the violation",
+      "affectedElement": "The specific element causing the violation (e.g., hex color, font name, text)",
+      "suggestedFix": "How to fix it",
+      "autoFixable": true | false
+    }
+  ],
   "positives": [],
   "limitations": [
     "Visual verification not possible",
@@ -440,8 +449,8 @@ const generateMockAnalysis = (brandKit, design) => {
       accessibilityScore * 0.15 +
       toneScore * 0.1
   );
-
-  // Generate summary
+  
+// Generate summary
   let summary;
   if (complianceScore >= 90) {
     summary =
@@ -559,6 +568,11 @@ export const runBrandAnalysis = async (brandKit, design) => {
     const analysisResult = JSON.parse(jsonText);
     analysisResult.processingTime = Date.now() - startTime;
     analysisResult.usedAI = true;
+
+    // Log violations structure for debugging
+    if (analysisResult.violations && analysisResult.violations.length > 0) {
+      logger.debug(`Violations structure: ${JSON.stringify(analysisResult.violations[0], null, 2)}`);
+    }
 
     logger.info(
       `Analysis complete. Score: ${
