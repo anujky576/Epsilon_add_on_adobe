@@ -38,6 +38,7 @@ const violationSchema = new mongoose.Schema(
       enum: [
         "color",
         "font",
+        "typography",
         "logo",
         "accessibility",
         "tone",

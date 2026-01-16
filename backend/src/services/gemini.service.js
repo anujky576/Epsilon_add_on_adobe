@@ -82,62 +82,129 @@ function getModel() {
   return model;
 }
 
-// ---------------------------------------------------------------------------
-// PROMPT TEMPLATES
-// ---------------------------------------------------------------------------
-
 /**
  * Main analysis prompt template
- * CRITICAL: This prompt structure is designed for consistent JSON output
+ * DETERMINISTIC VERSION - No hallucination, metadata-only analysis
+ * A11y = Accessibility (A + 11 letters + y)
  */
 const ANALYSIS_PROMPT_TEMPLATE = `
-You are a brand compliance expert. Analyze the following design against the brand guidelines and provide a detailed compliance report.
+You are BrandGuard AI, a deterministic brand compliance engine.
 
-## Brand Kit (Guidelines to follow):
-\`\`\`json
+You analyze ONLY the provided JSON metadata.
+You DO NOT assume missing information.
+You DO NOT hallucinate visual verification.
+You MUST follow scoring rules exactly.
+You MUST output valid JSON only.
+
+━━━━━━━━━━━━━━━━━━━━━━
+IMPORTANT CAPABILITIES
+━━━━━━━━━━━━━━━━━━━━━━
+• You CANNOT see images visually
+• You CANNOT recognize illustrations, creatures, mascots, or artwork
+• Illustrations, characters, animals, or creative elements are NOT violations
+• You ONLY evaluate: colors, fonts, text, metadata, dimensions
+
+━━━━━━━━━━━━━━━━━━━━━━
+ABSENCE RULES (CRITICAL)
+━━━━━━━━━━━━━━━━━━━━━━
+• Missing logo ≠ violation
+• Missing logo → logo score = 0 AND "not evaluated"
+• Missing fonts list → typography score = 50 (unknown)
+• Missing colorsUsed → color score = 50 (unknown)
+• DO NOT invent violations for missing data
+
+━━━━━━━━━━━━━━━━━━━━━━
+LOGO RULES (STRICT)
+━━━━━━━━━━━━━━━━━━━━━━
+IF design.images contains NO item with type="logo":
+→ logo.score = 0
+→ logo.status = "not_present"
+→ NO violation
+
+IF design.images contains type="logo":
+→ You MAY check dimensions ONLY
+→ You MUST NOT verify brand correctness
+→ MAX logo score = 50
+→ Always add limitation note
+
+━━━━━━━━━━━━━━━━━━━━━━
+COLOR SCORING (0–100)
+━━━━━━━━━━━━━━━━━━━━━━
+• Neutral colors (white, black, gray) are ALWAYS allowed
+• Brand color match = hex exact OR close (±15 RGB distance)
+
+SCORING:
+- ≥1 brand color used → base 70
+- Each extra matching brand color → +10
+- Each off-brand non-neutral color → −15
+- No brand colors at all → MAX 40
+
+━━━━━━━━━━━━━━━━━━━━━━
+TYPOGRAPHY SCORING
+━━━━━━━━━━━━━━━━━━━━━━
+• Exact brand font match → 100
+• Unknown font → 50
+• Explicitly wrong font → 30–50
+• DO NOT assume font intent
+
+━━━━━━━━━━━━━━━━━━━━━━
+ACCESSIBILITY (A11y) CHECK
+━━━━━━━━━━━━━━━━━━━━━━
+• fontSize < 12px → violation
+• If no text → accessibility = 100
+
+━━━━━━━━━━━━━━━━━━━━━━
+TONE RULES
+━━━━━━━━━━━━━━━━━━━━━━
+• Only check banned words
+• Do NOT infer brand personality
+• No banned words → 100
+
+━━━━━━━━━━━━━━━━━━━━━━
+FINAL SCORE CALCULATION
+━━━━━━━━━━━━━━━━━━━━━━
+overallScore =
+(color * 0.3) +
+(typography * 0.25) +
+(logo * 0.2) +
+(accessibility * 0.15) +
+(tone * 0.1)
+
+━━━━━━━━━━━━━━━━━━━━━━
+INPUT DATA
+━━━━━━━━━━━━━━━━━━━━━━
+
+BRAND_KIT:
 {BRAND_KIT}
-\`\`\`
 
-## Design to Analyze:
-\`\`\`json
+DESIGN:
 {DESIGN}
-\`\`\`
 
-## Instructions:
-1. Compare each element of the design against the brand guidelines
-2. Identify ALL violations, no matter how minor
-3. Calculate a compliance score (0-100) based on:
-   - Color matching: 30% weight
-   - Typography: 25% weight  
-   - Logo usage: 20% weight
-   - Accessibility: 15% weight
-   - Tone/Language: 10% weight
-4. For each violation, provide a specific, actionable fix
-
-## Required JSON Output Format:
+━━━━━━━━━━━━━━━━━━━━━━
+REQUIRED OUTPUT (JSON ONLY)
+━━━━━━━━━━━━━━━━━━━━━━
 {
-  "complianceScore": <number 0-100>,
-  "summary": "<brief 1-2 sentence summary>",
+  "designType": "graphic | illustration | text | mixed",
+  "complianceScore": number,
+  "summary": "factual, short, no opinions",
   "categoryScores": {
-    "color": <number 0-100>,
-    "typography": <number 0-100>,
-    "logo": <number 0-100>,
-    "accessibility": <number 0-100>,
-    "tone": <number 0-100>
+    "color": number,
+    "typography": number,
+    "logo": number,
+    "accessibility": number,
+    "tone": number
   },
-  "violations": [
-    {
-      "type": "<color|font|logo|accessibility|tone|spacing|layout>",
-      "severity": "<critical|high|medium|low>",
-      "description": "<clear description of the violation>",
-      "affectedElement": "<the specific element causing the violation>",
-      "suggestedFix": "<specific fix recommendation>",
-      "autoFixable": <true|false>
-    }
+  "violations": [],
+  "positives": [],
+  "limitations": [
+    "Visual verification not possible",
+    "Analysis based on metadata only"
   ]
 }
 
-Respond ONLY with valid JSON, no additional text.
+DO NOT include markdown.
+DO NOT include explanations.
+DO NOT include text outside JSON.
 `;
 
 /**
@@ -200,21 +267,84 @@ const generateMockAnalysis = (brandKit, design) => {
   let accessibilityScore = 100;
   let toneScore = 100;
 
-  // Check colors
+  // Helper: Check if color is a neutral (white, black, gray)
+  const isNeutralColor = (hex) => {
+    const neutral = hex.toLowerCase();
+    // Common neutrals that shouldn't be flagged
+    const neutrals = [
+      "#ffffff",
+      "#000000",
+      "#fff",
+      "#000",
+      "#f5f5f5",
+      "#e0e0e0",
+      "#333333",
+      "#666666",
+      "#999999",
+      "#cccccc",
+      "#fafafa",
+      "#f0f0f0",
+    ];
+    if (neutrals.includes(neutral)) return true;
+
+    // Check if it's a gray (R ≈ G ≈ B)
+    if (neutral.length === 7) {
+      const r = parseInt(neutral.slice(1, 3), 16);
+      const g = parseInt(neutral.slice(3, 5), 16);
+      const b = parseInt(neutral.slice(5, 7), 16);
+      const maxDiff = Math.max(
+        Math.abs(r - g),
+        Math.abs(g - b),
+        Math.abs(r - b)
+      );
+      if (maxDiff < 15) return true; // It's essentially gray
+    }
+    return false;
+  };
+
+  // Helper: Check if two colors are within tolerance
+  const colorsMatch = (color1, color2, tolerance = 15) => {
+    const hex1 = color1.toLowerCase().replace("#", "");
+    const hex2 = color2.toLowerCase().replace("#", "");
+    if (hex1.length !== 6 || hex2.length !== 6) return false;
+
+    const r1 = parseInt(hex1.slice(0, 2), 16);
+    const g1 = parseInt(hex1.slice(2, 4), 16);
+    const b1 = parseInt(hex1.slice(4, 6), 16);
+    const r2 = parseInt(hex2.slice(0, 2), 16);
+    const g2 = parseInt(hex2.slice(2, 4), 16);
+    const b2 = parseInt(hex2.slice(4, 6), 16);
+
+    const diff = Math.sqrt(
+      Math.pow(r1 - r2, 2) + Math.pow(g1 - g2, 2) + Math.pow(b1 - b2, 2)
+    );
+    const maxDiff = Math.sqrt(3 * Math.pow(255, 2)); // Max possible difference
+    const percentDiff = (diff / maxDiff) * 100;
+
+    return percentDiff <= tolerance;
+  };
+
+  // Check colors with tolerance and neutral awareness
   colorsUsed.forEach((color) => {
-    const normalizedColor = color.toLowerCase();
-    if (!brandColors.includes(normalizedColor)) {
-      // Find closest brand color for suggestion
+    // Skip neutral colors - they're always acceptable
+    if (isNeutralColor(color)) return;
+
+    // Check if color matches any brand color within tolerance
+    const matchesBrand = brandColors.some((brandColor) =>
+      colorsMatch(color, brandColor, 15)
+    );
+
+    if (!matchesBrand) {
       const suggestedColor = brandColors[0] || "#000000";
       violations.push({
         type: "color",
-        severity: "high",
-        description: `Color ${color} is not in the approved brand palette`,
+        severity: "medium", // Lower severity - might be intentional
+        description: `Color ${color} is not close to any brand palette color`,
         affectedElement: color,
         suggestedFix: suggestedColor,
         autoFixable: true,
       });
-      colorScore -= 20;
+      colorScore -= 10; // Smaller penalty
     }
   });
 

@@ -253,6 +253,7 @@ export const runAnalysis = async (req, res, next) => {
           analysisId: savedResult._id,
           complianceScore: savedResult.complianceScore,
           scoreLabel: savedResult.scoreLabel,
+          designType: analysisResult.designType || "mixed",
           violations: savedResult.violations.map((v) => ({
             type: v.type,
             severity: v.severity,
@@ -263,6 +264,7 @@ export const runAnalysis = async (req, res, next) => {
           })),
           categoryScores: savedResult.categoryScores,
           summary: savedResult.summary,
+          positives: analysisResult.positives || [],
           processingTime: savedResult.processingTime,
         },
         "Brand analysis completed successfully"

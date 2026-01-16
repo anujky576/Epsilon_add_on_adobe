@@ -135,7 +135,8 @@ function extractTextData(node, textContent, fonts) {
 }
 
 /**
- * Extract image/media data
+ * Extract image/media data and classify type
+ * Types: logo, photo, graphic, icon, background
  */
 function extractImageData(node, images) {
   try {
@@ -146,27 +147,47 @@ function extractImageData(node, images) {
       node.type === "ImageRectangle"
     ) {
       const bounds = node.boundsLocal || {};
-      const imageInfo = {
-        type: "image",
-        width: bounds.width || 100,
-        height: bounds.height || 100,
-      };
+      const width = bounds.width || 100;
+      const height = bounds.height || 100;
+      const aspectRatio = width / height;
+      const area = width * height;
 
-      // Check if this might be a logo (small image)
-      if (imageInfo.width < 200 && imageInfo.height < 200) {
-        imageInfo.type = "logo";
+      // Classify image type based on size and aspect ratio
+      let imageType = "photo"; // Default to photo (won't affect brand colors)
+
+      // Small square-ish images are likely logos/icons
+      if (area < 40000 && aspectRatio > 0.5 && aspectRatio < 2) {
+        imageType = "logo";
+      }
+      // Very small images are icons
+      else if (area < 10000) {
+        imageType = "icon";
+      }
+      // Very large images covering most of canvas are backgrounds
+      else if (area > 500000) {
+        imageType = "background";
+      }
+      // Medium sized images are likely decorative photos
+      else {
+        imageType = "photo"; // Photos - colors should be IGNORED
       }
 
-      images.push(imageInfo);
+      images.push({
+        type: imageType,
+        width: width,
+        height: height,
+        isDecorativePhoto: imageType === "photo" || imageType === "background",
+      });
     }
 
     // Check for rectangles with image fills
     if (node.type === "Rectangle" && node.fill && node.fill.type === "image") {
       const bounds = node.boundsLocal || {};
       images.push({
-        type: "image",
+        type: "photo", // Image fills are usually decorative photos
         width: bounds.width || 100,
         height: bounds.height || 100,
+        isDecorativePhoto: true,
       });
     }
   } catch (e) {

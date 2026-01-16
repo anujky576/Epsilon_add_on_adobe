@@ -344,32 +344,48 @@ function updateRiskScores(riskScores) {
   });
 }
 
-function updateExecutiveInsight(summary) {
+function updateExecutiveInsight(summary, positives = []) {
   const container = document.getElementById("executiveInsight");
   const textEl = document.getElementById("insightText");
 
-  if (summary && textEl) {
-    // Generate insight based on analysis
-    const violationCount = currentViolations.length;
-    const criticalCount = currentViolations.filter(
-      (v) => v.severity === "critical" || v.severity === "high"
-    ).length;
+  if (container && textEl) {
+    // Use the actual AI summary if available
+    if (summary && typeof summary === "string" && summary.length > 10) {
+      textEl.innerHTML = summary;
 
-    let insight = "";
-    if (violationCount === 0) {
-      insight =
-        "This design fully complies with brand guidelines. Ready for publication.";
-    } else if (criticalCount > 0) {
-      insight = `Found ${criticalCount} critical issue${
-        criticalCount > 1 ? "s" : ""
-      } requiring immediate attention. These may impact brand perception or accessibility compliance.`;
+      // Add positives if available
+      if (positives && positives.length > 0) {
+        const positivesHtml = positives
+          .map(
+            (p) =>
+              `<span class="inline-block bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-[10px] mr-1 mt-1">✓ ${p}</span>`
+          )
+          .join("");
+        textEl.innerHTML += `<div class="mt-2">${positivesHtml}</div>`;
+      }
     } else {
-      insight = `Found ${violationCount} minor issue${
-        violationCount > 1 ? "s" : ""
-      }. The design is mostly compliant but could benefit from minor adjustments.`;
+      // Generate fallback insight based on violations
+      const violationCount = currentViolations.length;
+      const criticalCount = currentViolations.filter(
+        (v) => v.severity === "critical" || v.severity === "high"
+      ).length;
+
+      let insight = "";
+      if (violationCount === 0) {
+        insight =
+          "This design fully complies with brand guidelines. Ready for publication.";
+      } else if (criticalCount > 0) {
+        insight = `Found ${criticalCount} critical issue${
+          criticalCount > 1 ? "s" : ""
+        } requiring immediate attention.`;
+      } else {
+        insight = `Found ${violationCount} minor issue${
+          violationCount > 1 ? "s" : ""
+        }. The design is mostly compliant.`;
+      }
+      textEl.textContent = insight;
     }
 
-    textEl.textContent = insight;
     container.classList.remove("hidden");
   }
 }
@@ -687,6 +703,6 @@ addOnUISdk.ready.then(() => {
     updateCategoryScores(analysisResult.categoryScores);
     updateRiskScores(riskScores);
     updateViolationsList(analysisResult.violations);
-    updateExecutiveInsight(analysisResult.summary);
+    updateExecutiveInsight(analysisResult.summary, analysisResult.positives);
   }
 });
