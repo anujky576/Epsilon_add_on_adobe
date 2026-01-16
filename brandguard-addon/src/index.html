@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="description"
+      content="BrandGuard AI - Enterprise Brand Governance Add-on"
+    />
+    <meta
+      name="keywords"
+      content="Adobe, Express, Add-On, BrandGuard, AI, Brand Governance"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>BrandGuard AI</title>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                primary: "#6366f1",
+                secondary: "#0ea5e9",
+                light: "#eef2ff",
+                dark: "#1e1b4b",
+                cream: "#f8fafc",
+                gold: "#f59e0b",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, sans-serif;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        color: #f1f5f9;
+        margin: 0;
+        padding: 0;
+      }
+      .scrollbar-thin::-webkit-scrollbar {
+        width: 4px;
+      }
+      .scrollbar-thin::-webkit-scrollbar-track {
+        background: #1e293b;
+      }
+      .scrollbar-thin::-webkit-scrollbar-thumb {
+        background: #6366f1;
+        border-radius: 4px;
+      }
+      .glass {
+        background: rgba(30, 41, 59, 0.8);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+      }
+      .score-ring {
+        transform: rotate(-90deg);
+      }
+      .loading-spinner {
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .risk-bar {
+        transition: width 0.5s ease;
+      }
+    </style>
+  </head>
+  <body class="bg-slate-900">
+    <!-- Header -->
+    <div
+      class="glass px-4 py-3 flex items-center justify-between sticky top-0 z-50"
+    >
+      <div class="flex items-center gap-2">
+        <div
+          class="w-8 h-8 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-lg flex items-center justify-center shadow-lg shadow-brand-primary/30"
+        >
+          <svg
+            class="w-5 h-5 text-white"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <span
+          class="font-bold text-brand-primary text-lg bg-gradient-to-r from-brand-primary to-brand-secondary bg-clip-text text-transparent"
+          >BrandGuard AI</span
+        >
+      </div>
+      <span
+        id="backendStatus"
+        class="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-400"
+        >Connecting...</span
+      >
+    </div>
+
+    <!-- Main Content -->
+    <div
+      class="p-4 overflow-y-auto scrollbar-thin"
+      style="height: calc(100vh - 56px)"
+    >
+      <!-- Upload Section (Initial State) -->
+      <div id="uploadSection">
+        <h2 class="text-xl font-bold text-white mb-1">Design Analyzer</h2>
+        <p class="text-slate-400 text-sm mb-4">
+          Analyze your design against brand guidelines
+        </p>
+
+        <!-- Brand Kit Selection -->
+        <div class="mb-4">
+          <label
+            class="text-xs text-slate-400 font-medium flex items-center gap-2"
+          >
+            <span>🎨</span> SELECT BRAND KIT
+          </label>
+          <select
+            id="brandKitSelect"
+            class="w-full mt-1 px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-lg text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary text-white"
+          >
+            <option value="">Loading brand kits...</option>
+          </select>
+          <div id="brandKitInfo" class="mt-2 text-xs text-slate-500 hidden">
+            <span id="brandKitVersion">v1</span> •
+            <span id="brandKitColors">0</span> colors •
+            <span id="brandKitFonts">0</span> fonts
+          </div>
+        </div>
+
+        <!-- Analyze Current Design Button -->
+        <button
+          id="analyzeBtn"
+          class="w-full bg-gradient-to-r from-brand-primary to-brand-secondary hover:from-brand-primary hover:to-purple-500 text-white py-3.5 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-brand-primary/30 hover:shadow-brand-primary/50"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+            ></path>
+          </svg>
+          Analyze Current Design
+        </button>
+
+        <!-- Drop Zone -->
+        <div class="flex items-center gap-3 my-4">
+          <div class="flex-1 h-px bg-slate-700"></div>
+          <span class="text-slate-500 text-xs">OR UPLOAD FILE</span>
+          <div class="flex-1 h-px bg-slate-700"></div>
+        </div>
+
+        <div
+          id="dropZone"
+          class="border-2 border-dashed border-slate-600 rounded-xl p-5 text-center cursor-pointer transition-all duration-200 hover:border-brand-primary hover:bg-slate-800/50"
+        >
+          <div class="flex flex-col items-center gap-2">
+            <div
+              class="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center"
+            >
+              <svg
+                class="w-5 h-5 text-brand-primary"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                ></path>
+              </svg>
+            </div>
+            <p class="text-slate-300 font-medium text-sm">Drag & drop files</p>
+            <p class="text-slate-500 text-xs">PNG, JPG, SVG, PDF</p>
+            <input
+              type="file"
+              id="fileInput"
+              class="hidden"
+              multiple
+              accept="image/*,.pdf,.svg"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Analysis Results Section (Hidden Initially) -->
+      <div id="resultsSection" class="hidden">
+        <!-- Score Card -->
+        <div class="glass rounded-2xl p-4 mb-4">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs text-slate-400 font-medium tracking-wider"
+              >COMPLIANCE SCORE</span
+            >
+            <span
+              id="scoreBadge"
+              class="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-medium"
+              >Analyzing</span
+            >
+          </div>
+
+          <!-- Score Gauge -->
+          <div class="flex items-center justify-center py-4">
+            <div class="relative" style="width: 140px; height: 140px">
+              <svg class="score-ring" width="140" height="140">
+                <circle
+                  cx="70"
+                  cy="70"
+                  r="60"
+                  fill="none"
+                  stroke="#334155"
+                  stroke-width="10"
+                />
+                <circle
+                  id="scoreRing"
+                  cx="70"
+                  cy="70"
+                  r="60"
+                  fill="none"
+                  stroke="url(#gradient)"
+                  stroke-width="10"
+                  stroke-linecap="round"
+                  stroke-dasharray="377"
+                  stroke-dashoffset="377"
+                />
+                <defs>
+                  <linearGradient
+                    id="gradient"
+                    x1="0%"
+                    y1="0%"
+                    x2="100%"
+                    y2="0%"
+                  >
+                    <stop offset="0%" stop-color="#6366f1" />
+                    <stop offset="100%" stop-color="#0ea5e9" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div
+                class="absolute inset-0 flex flex-col items-center justify-center"
+              >
+                <span id="scoreValue" class="text-4xl font-bold text-white"
+                  >--</span
+                >
+                <span class="text-xs text-slate-400">/ 100</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Category Scores -->
+          <div id="categoryScores" class="grid grid-cols-5 gap-2 mt-2">
+            <div class="text-center">
+              <div class="text-lg font-bold text-slate-300">--</div>
+              <div class="text-[10px] text-slate-500">Color</div>
+            </div>
+            <div class="text-center">
+              <div class="text-lg font-bold text-slate-300">--</div>
+              <div class="text-[10px] text-slate-500">Type</div>
+            </div>
+            <div class="text-center">
+              <div class="text-lg font-bold text-slate-300">--</div>
+              <div class="text-[10px] text-slate-500">Logo</div>
+            </div>
+            <div class="text-center">
+              <div class="text-lg font-bold text-slate-300">--</div>
+              <div class="text-[10px] text-slate-500">A11y</div>
+            </div>
+            <div class="text-center">
+              <div class="text-lg font-bold text-slate-300">--</div>
+              <div class="text-[10px] text-slate-500">Tone</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Risk Assessment -->
+        <div class="glass rounded-2xl p-4 mb-4">
+          <h3 class="text-xs text-slate-400 font-medium tracking-wider mb-3">
+            RISK ASSESSMENT
+          </h3>
+          <div class="space-y-3">
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-sm text-slate-300">Brand Risk</span>
+                <span id="brandRisk" class="text-sm font-medium text-green-400"
+                  >0%</span
+                >
+              </div>
+              <div class="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  id="brandRiskBar"
+                  class="risk-bar h-full bg-green-500 rounded-full"
+                  style="width: 0%"
+                ></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-sm text-slate-300">Accessibility Risk</span>
+                <span
+                  id="accessibilityRisk"
+                  class="text-sm font-medium text-green-400"
+                  >0%</span
+                >
+              </div>
+              <div class="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  id="accessibilityRiskBar"
+                  class="risk-bar h-full bg-green-500 rounded-full"
+                  style="width: 0%"
+                ></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-sm text-slate-300">Legal Risk</span>
+                <span id="legalRisk" class="text-sm font-medium text-green-400"
+                  >0%</span
+                >
+              </div>
+              <div class="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  id="legalRiskBar"
+                  class="risk-bar h-full bg-green-500 rounded-full"
+                  style="width: 0%"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Executive Insight -->
+        <div
+          id="executiveInsight"
+          class="glass rounded-2xl p-4 mb-4 hidden border-l-4 border-brand-primary"
+        >
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-lg">💡</span>
+            <h3 class="text-sm font-semibold text-white">Executive Insight</h3>
+          </div>
+          <p
+            id="insightText"
+            class="text-sm text-slate-300 leading-relaxed"
+          ></p>
+        </div>
+
+        <!-- Detected Issues -->
+        <div class="mb-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-white flex items-center gap-2">
+              <span>⚠️</span> Detected Issues
+              <span
+                id="issueCount"
+                class="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full"
+                >0</span
+              >
+            </h3>
+          </div>
+          <div class="space-y-2" id="issuesList"></div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-2 mt-4">
+          <button
+            id="reAnalyzeBtn"
+            class="flex-1 bg-slate-800 border border-slate-600 text-slate-300 py-2.5 rounded-xl font-medium hover:bg-slate-700 transition-colors text-sm flex items-center justify-center gap-1"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            Re-Analyze
+          </button>
+          <button
+            id="autoFixAllBtn"
+            class="flex-1 bg-gradient-to-r from-brand-primary to-brand-secondary text-white py-2.5 rounded-xl font-medium hover:opacity-90 transition-all text-sm flex items-center justify-center gap-1 shadow-lg shadow-brand-primary/30"
+          >
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+              />
+            </svg>
+            Auto-Fix All
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="add-on-console-override.js"></script>
+    <script type="module" src="index.js"></script>
+  </body>
+</html>

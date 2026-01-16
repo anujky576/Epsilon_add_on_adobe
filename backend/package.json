@@ -1,0 +1,36 @@
+{
+  "name": "brandguard-ai-backend",
+  "version": "1.0.0",
+  "description": "Production-grade API-first SaaS backend for BrandGuard AI - Adobe Express brand compliance checking with Gemini AI",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "keywords": [
+    "brandguard",
+    "adobe-express",
+    "brand-compliance",
+    "gemini-ai",
+    "design-analysis"
+  ],
+  "author": "BrandGuard AI Team",
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "helmet": "^7.1.0",
+    "mongoose": "^8.6.0",
+    "morgan": "^1.10.0",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
