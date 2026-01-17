@@ -21,14 +21,13 @@ import addOnUISdk from "https://new.express.adobe.com/static/add-on-sdk/sdk.js";
 const API_BASE_URL = "http://localhost:3000";
 
 // Session state
-let currentBrandKitId = null;
-let currentBrandKit = null;
+let uploadedBrandKitFile = null; // User-uploaded brand kit for comparison
 let currentDesignId = null;
 let currentAnalysisId = null;
 let currentViolations = [];
 let brandKits = [];
 let currentUser = null;
-let uploadedDesignFile = null;
+// let uploadedBrandKitFile = null; // Optional: User can upload brand kit file instead of using backend brand kits
 
 // =============================================================================
 // AUTHENTICATION
@@ -196,8 +195,7 @@ function handleSignout() {
   clearStoredUser();
   showLoginSection();
   // Reset state
-  currentBrandKitId = null;
-  currentBrandKit = null;
+  uploadedBrandKitFile = null;
   currentDesignId = null;
   currentAnalysisId = null;
   currentViolations = [];
@@ -238,78 +236,75 @@ async function apiRequest(endpoint, method = "GET", data = null) {
 // BRAND KIT MANAGEMENT
 // =============================================================================
 
-async function loadBrandKits() {
+// Note: Brand kits are now user-uploaded files
+// We need to extract brand kit info from uploaded file and create temporary brand kit
+
+/**
+ * Process uploaded brand kit file and extract brand information using AI
+ * Reads the actual file and extracts colors, fonts, logos from the image
+ */
+async function processBrandKitFile(file) {
+  console.log("🎨 Processing brand kit file:", file.name);
+  console.log("📄 File type:", file.type);
+  console.log("📦 File size:", (file.size / 1024).toFixed(2), "KB");
+  
   try {
-    const data = await apiRequest("/api/brandkit");
-    brandKits = data.brandKits || [];
+    // Step 1: Read file as base64
+    console.log("📖 Reading file content...");
+    const base64Data = await readFileAsBase64(file);
+    console.log("✅ File content read successfully");
 
-    const select = document.getElementById("brandKitSelect");
-    select.innerHTML = "";
-
-    if (brandKits.length === 0) {
-      // No brand kits exist - prompt user to create one via dashboard
-      const option = document.createElement("option");
-      option.value = "";
-      option.textContent = "No brand kits found - Create one in Dashboard";
-      select.appendChild(option);
-      
-      // Hide brand kit info and disable analyze button
-      document.getElementById("brandKitInfo").classList.add("hidden");
-      document.getElementById("analyzeBtn").disabled = true;
-      document.getElementById("analyzeBtn").classList.add("opacity-50", "cursor-not-allowed");
-      
-      return brandKits;
-    }
-
-    brandKits.forEach((kit, index) => {
-      const option = document.createElement("option");
-      option.value = kit._id;
-      option.textContent = `${kit.name}${
-        kit.isDefault ? " (Default)" : ""
-      } - v${kit.version || 1}`;
-      if (index === 0) option.selected = true;
-      select.appendChild(option);
+    // Step 2: Send to backend for AI analysis
+    console.log("🤖 Sending to backend for AI brand extraction...");
+    const response = await fetch(`${API_BASE_URL}/api/brandkit/extract`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fileName: file.name,
+        fileType: file.type,
+        fileData: base64Data,
+        extractColors: true,
+        extractFonts: true,
+        extractLogos: true,
+      }),
     });
 
-    // Enable analyze button
-    document.getElementById("analyzeBtn").disabled = false;
-    document.getElementById("analyzeBtn").classList.remove("opacity-50", "cursor-not-allowed");
-
-    // Select first brand kit
-    if (brandKits.length > 0) {
-      selectBrandKit(brandKits[0]._id);
+    const result = await response.json();
+    
+    if (result.success) {
+      console.log("✅ Brand kit extracted and created:", result.data.brandKit._id);
+      console.log("   Colors extracted:", result.data.brandKit.colors?.length || 0);
+      console.log("   Fonts extracted:", result.data.brandKit.fonts?.length || 0);
+      return result.data.brandKit;
+    } else {
+      console.error("❌ Backend error:", result);
+      throw new Error(result.message || "Failed to extract brand kit from file");
     }
-
-    return brandKits;
   } catch (error) {
-    console.error("Failed to load brand kits:", error);
-    document.getElementById("brandKitSelect").innerHTML =
-      '<option value="">Failed to load</option>';
+    console.error("❌ Failed to process brand kit file:", error);
     throw error;
   }
 }
 
-// NOTE: Default brand kit creation removed - users should create brand kits via Dashboard
-// This ensures only real, user-uploaded brand kits are used for analysis
-
-function selectBrandKit(brandKitId) {
-  const kit = brandKits.find((k) => k._id === brandKitId);
-  if (kit) {
-    currentBrandKitId = kit._id;
-    currentBrandKit = kit;
-
-    // Update info display
-    document.getElementById("brandKitInfo").classList.remove("hidden");
-    document.getElementById("brandKitVersion").textContent = `v${
-      kit.version || 1
-    }`;
-    document.getElementById("brandKitColors").textContent =
-      kit.colors?.length || 0;
-    document.getElementById("brandKitFonts").textContent =
-      kit.fonts?.length || 0;
-
-    console.log("Selected brand kit:", kit.name, kit._id);
-  }
+/**
+ * Helper function to read file as base64
+ */
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = () => {
+      // Extract base64 data (remove data:image/png;base64, prefix)
+      const base64String = reader.result.split(',')[1];
+      resolve(base64String);
+    };
+    
+    reader.onerror = () => {
+      reject(new Error("Failed to read file"));
+    };
+    
+    reader.readAsDataURL(file);
+  });
 }
 
 // =============================================================================
@@ -320,15 +315,7 @@ async function extractDesignData() {
   try {
     const sdk = addOnUISdk.instance;
     
-    // If user uploaded a design file, include that info
-    let uploadedFileInfo = null;
-    if (uploadedDesignFile) {
-      uploadedFileInfo = {
-        name: uploadedDesignFile.name,
-        type: uploadedDesignFile.type,
-        size: uploadedDesignFile.size,
-      };
-    }
+    console.log("📐 Extracting design from Adobe Express canvas...");
 
     // Try multiple ways to access the Document Sandbox API
     let designData = null;
@@ -415,10 +402,7 @@ async function extractDesignData() {
     }
 
     if (designData) {
-      if (uploadedFileInfo) {
-        designData.uploadedFile = uploadedFileInfo;
-      }
-      console.log("Successfully extracted design data:", designData);
+      console.log("✅ Successfully extracted design data from canvas:", designData);
       return designData;
     } else {
       console.warn("Document Sandbox not available - using fallback data");
@@ -431,24 +415,11 @@ async function extractDesignData() {
       console.warn("SDK app keys:", sdk.app ? JSON.stringify(Object.keys(sdk.app)) : "undefined");
       
       const fallbackData = getFallbackDesignData();
-      if (uploadedFileInfo) {
-        fallbackData.uploadedFile = uploadedFileInfo;
-        fallbackData.name = uploadedFileInfo.name;
-      }
       return fallbackData;
     }
   } catch (error) {
-    console.error("Fatal extraction error:", error);
-    const fallbackData = getFallbackDesignData();
-    if (uploadedDesignFile) {
-      fallbackData.uploadedFile = {
-        name: uploadedDesignFile.name,
-        type: uploadedDesignFile.type,
-        size: uploadedDesignFile.size,
-      };
-      fallbackData.name = uploadedDesignFile.name;
-    }
-    return fallbackData;
+    console.error("❌ Fatal extraction error:", error);
+    return getFallbackDesignData();
   }
 }
 
@@ -476,20 +447,24 @@ async function submitDesign(designData) {
 // ANALYSIS
 // =============================================================================
 
-async function runAnalysis() {
-  if (!currentBrandKitId || !currentDesignId) {
+async function runAnalysis(brandKitId) {
+  if (!brandKitId || !currentDesignId) {
     throw new Error("Brand kit and design must be set");
   }
 
+  console.log("📊 Running analysis...");
+  console.log("  Brand Kit ID:", brandKitId);
+  console.log("  Design ID:", currentDesignId);
+
   const result = await apiRequest("/api/analysis/run", "POST", {
-    brandKitId: currentBrandKitId,
+    brandKitId: brandKitId,
     designId: currentDesignId,
     useAI: true,
   });
 
   currentAnalysisId = result.analysisId;
   currentViolations = result.violations || [];
-  console.log("Analysis complete:", result);
+  console.log("✅ Analysis complete:", result);
   return result;
 }
 
@@ -691,9 +666,9 @@ function updateViolationsList(violations) {
     const badgeText = isCritical ? "CRITICAL" : "WARNING";
 
     const card = document.createElement("div");
-    card.className = `card p-4 border-l-4 ${borderColor}`;
+    card.className = `card border-l-4 ${borderColor} overflow-hidden`;
     card.innerHTML = `
-      <div class="flex items-start justify-between mb-3">
+      <button class="w-full p-4 flex items-center justify-between hover:bg-black/[0.02] transition-all duration-300 issue-toggle" data-index="${index}">
         <div class="flex items-center gap-3">
           <div class="w-8 h-8 ${iconBg} rounded-full flex items-center justify-center">
             <span class="material-symbols-outlined text-base">warning</span>
@@ -701,27 +676,51 @@ function updateViolationsList(violations) {
           <span class="font-medium text-sm text-neutral-black">${formatViolationType(
             violation.type
           )}</span>
+          <span class="text-[8px] ${badgeColor} px-2 py-1 rounded-full font-bold uppercase tracking-[0.1em]">${badgeText}</span>
         </div>
-        <span class="text-[8px] ${badgeColor} px-2 py-1 rounded-full font-bold uppercase tracking-[0.1em]">${badgeText}</span>
-      </div>
-      <p class="text-xs text-neutral-black/50 mb-3 font-light leading-relaxed">${violation.description}</p>
-      <div class="flex items-center justify-between">
-        <span class="text-[9px] uppercase tracking-[0.1em] text-neutral-black/30">${formatAffectedElement(
-          violation.affectedElement
-        )}</span>
-        ${
-          violation.autoFixable
-            ? `
-          <button data-index="${index}" class="autofix-btn text-[9px] bg-primary/10 text-primary px-3 py-1.5 rounded-lg font-bold uppercase tracking-[0.1em] hover:bg-primary hover:text-white transition-all duration-500 flex items-center gap-2">
-            <span class="material-symbols-outlined text-sm">auto_fix_high</span>
-            Fix
-          </button>
-        `
-            : ""
-        }
+        <span class="material-symbols-outlined text-neutral-black/40 transition-transform duration-300 chevron-icon">expand_more</span>
+      </button>
+      <div class="issue-details hidden px-4 pb-4">
+        <div class="pt-2 border-t border-black/[0.04]">
+          <p class="text-xs text-neutral-black/60 mb-3 font-light leading-relaxed">${violation.description}</p>
+          <div class="flex items-center justify-between">
+            <span class="text-[9px] uppercase tracking-[0.1em] text-neutral-black/30">${formatAffectedElement(
+              violation.affectedElement
+            )}</span>
+            ${
+              violation.autoFixable
+                ? `
+              <button data-index="${index}" class="autofix-btn text-[9px] bg-primary/10 text-primary px-3 py-1.5 rounded-lg font-bold uppercase tracking-[0.1em] hover:bg-primary hover:text-white transition-all duration-500 flex items-center gap-2">
+                <span class="material-symbols-outlined text-sm">auto_fix_high</span>
+                Fix
+              </button>
+            `
+                : ""
+            }
+          </div>
+        </div>
       </div>
     `;
     issuesList.appendChild(card);
+  });
+
+  // Attach toggle handlers for collapsible issues
+  document.querySelectorAll(".issue-toggle").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const card = e.currentTarget.closest(".card");
+      const details = card.querySelector(".issue-details");
+      const chevron = card.querySelector(".chevron-icon");
+      
+      // Toggle details visibility
+      details.classList.toggle("hidden");
+      
+      // Rotate chevron
+      if (details.classList.contains("hidden")) {
+        chevron.style.transform = "rotate(0deg)";
+      } else {
+        chevron.style.transform = "rotate(180deg)";
+      }
+    });
   });
 
   // Attach auto-fix handlers
@@ -960,9 +959,6 @@ addOnUISdk.ready.then(() => {
         backendStatus.innerHTML = '<span class="material-symbols-outlined text-sm">check_circle</span>';
         backendStatus.className =
           "w-6 h-6 flex items-center justify-center rounded-full bg-green-100 text-green-600";
-        if (currentUser) {
-          loadBrandKits();
-        }
       }
     })
     .catch(() => {
@@ -971,26 +967,24 @@ addOnUISdk.ready.then(() => {
         "text-[9px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 rounded-full bg-primary/10 text-primary";
     });
 
-  // Brand kit selection
-  brandKitSelect.addEventListener("change", (e) => {
-    if (e.target.value) {
-      selectBrandKit(e.target.value);
-    }
-  });
-
   // Analyze button
-  analyzeBtn.addEventListener("click", runFullAnalysis);
+  analyzeBtn.addEventListener("click", () => {
+    console.log("🔘 Analyze button clicked!");
+    console.log("  Uploaded brand kit file:", uploadedBrandKitFile?.name || "NONE");
+    runFullAnalysis();
+  });
   reAnalyzeBtn?.addEventListener("click", () => {
     resultsSection.classList.add("hidden");
     uploadSection.classList.remove("hidden");
     currentDesignId = null;
     currentAnalysisId = null;
     currentViolations = [];
-    // Reset uploaded file
-    uploadedDesignFile = null;
+    // Reset uploaded brand kit file
+    uploadedBrandKitFile = null;
     fileInput.value = "";
     document.getElementById("uploadedFilePreview")?.classList.add("hidden");
     dropZone.classList.remove("hidden");
+    analyzeBtn.disabled = true;
   });
 
   // Auto-fix all
@@ -1047,9 +1041,9 @@ addOnUISdk.ready.then(() => {
     }
   });
 
-  // Handle file upload - just store and preview, don't analyze
+  // Handle brand kit file upload (required)
   function handleFileUpload(file) {
-    uploadedDesignFile = file;
+    uploadedBrandKitFile = file;
     
     // Show file preview
     const preview = document.getElementById("uploadedFilePreview");
@@ -1058,12 +1052,17 @@ addOnUISdk.ready.then(() => {
     
     if (preview && fileName && fileSize) {
       fileName.textContent = file.name;
-      fileSize.textContent = formatFileSize(file.size);
+      fileSize.textContent = "Brand kit ready for comparison";
       preview.classList.remove("hidden");
       dropZone.classList.add("hidden");
     }
     
-    console.log("Design file uploaded:", file.name, file.type);
+    // Enable analyze button
+    analyzeBtn.disabled = false;
+    analyzeBtn.classList.remove("opacity-50", "cursor-not-allowed");
+    
+    console.log("✅ Brand kit file uploaded and ready for analysis:", file.name, file.type);
+    console.log("📊 Canvas design will be compared against this brand kit");
   }
 
   // Format file size
@@ -1076,41 +1075,69 @@ addOnUISdk.ready.then(() => {
   // Remove file button
   const removeFileBtn = document.getElementById("removeFileBtn");
   removeFileBtn?.addEventListener("click", () => {
-    uploadedDesignFile = null;
+    uploadedBrandKitFile = null;
     fileInput.value = "";
     document.getElementById("uploadedFilePreview")?.classList.add("hidden");
     dropZone.classList.remove("hidden");
   });
 
   async function runFullAnalysis() {
+    if (!uploadedBrandKitFile) {
+      alert("Please upload a brand kit first");
+      return;
+    }
+
+    console.log("🚀 Starting full analysis...");
+    console.log("📋 Step 1: Process uploaded brand kit file");
+    console.log("📐 Step 2: Extract design from Adobe Express canvas");
+    console.log("🔍 Step 3: Compare canvas design against brand kit");
+    console.log("🤖 Step 4: Run AI-powered analysis");
+    
     analyzeBtn.innerHTML =
       '<span class="material-symbols-outlined loading-spinner">progress_activity</span> Analyzing...';
     analyzeBtn.disabled = true;
 
     try {
-      // Ensure brand kit is selected
-      if (!currentBrandKitId && brandKits.length > 0) {
-        selectBrandKit(brandKits[0]._id);
-      }
+      // STEP 1: Process brand kit file and create temporary brand kit
+      console.log("🎨 Processing brand kit file:", uploadedBrandKitFile.name);
+      const brandKit = await processBrandKitFile(uploadedBrandKitFile);
+      console.log("✅ Brand kit processed with ID:", brandKit._id);
 
-      // Extract and submit design
+      // STEP 2: Extract design data from Adobe Express canvas
+      console.log("📐 Extracting design from canvas...");
       const designData = await extractDesignData();
+      console.log("✅ Canvas design extracted:", designData);
+      
+      // Add brand kit reference to design data
+      designData.brandKitId = brandKit._id;
+      designData.brandKitName = brandKit.name;
+      
+      // STEP 3: Submit extracted canvas design to backend
+      console.log("💾 Submitting design to backend...");
       await submitDesign(designData);
+      console.log("✅ Design submitted with ID:", currentDesignId);
 
-      // Run analysis
-      const result = await runAnalysis();
+      // STEP 4: Run analysis comparing canvas design against brand kit
+      console.log("🔍 Running analysis - comparing canvas vs brand kit...");
+      const result = await runAnalysis(brandKit._id);
+      console.log("✅ Analysis complete!");
+      console.log("   Compliance Score:", result.complianceScore);
+      console.log("   Violations Found:", result.violations?.length || 0);
 
       // Calculate risk scores based on violations
       const riskScores = calculateRiskScores(result.violations);
 
       // Show results
       showResults(result, riskScores);
+      
+      console.log("🎉 Analysis flow completed successfully!");
     } catch (error) {
-      console.error("Analysis failed:", error);
-      alert("Analysis failed. Ensure backend is running at " + API_BASE_URL);
+      console.error("❌ Analysis failed:", error);
+      console.error("Error details:", error.message);
+      alert(`Analysis failed: ${error.message}\n\nEnsure backend is running at ${API_BASE_URL}`);
     } finally {
       analyzeBtn.innerHTML =
-        '<span class="material-symbols-outlined">bolt</span> Analyze Design';
+        '<span class="material-symbols-outlined">bolt</span> Analyze';
       analyzeBtn.disabled = false;
     }
   }

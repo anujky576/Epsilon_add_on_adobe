@@ -20,8 +20,17 @@ import {
   getBrandKitVersions,
   getBrandKitVersion,
 } from "../controllers/brandKit.controller.js";
+import { extractBrandKit } from "../controllers/brandKitExtract.controller.js";
 
 const router = Router();
+
+/**
+ * @route   POST /api/brandkit/extract
+ * @desc    Extract brand kit from uploaded file using AI
+ * @access  Public
+ * @body    { fileName, fileType, fileData }
+ */
+router.post("/extract", extractBrandKit);
 
 /**
  * @route   POST /api/brandkit

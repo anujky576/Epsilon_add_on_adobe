@@ -646,9 +646,67 @@ export const getServiceStatus = () => {
   };
 };
 
+/**
+ * Analyze image with custom prompt (for brand kit extraction)
+ * @param {string} base64Image - Base64 encoded image
+ * @param {string} mimeType - Image MIME type (image/png, image/jpeg, etc.)
+ * @param {string} prompt - Custom prompt for image analysis
+ */
+const analyzeImageWithPrompt = async (base64Image, mimeType, prompt) => {
+  const geminiModel = getModel();
+
+  if (!geminiModel || getUseMockAI()) {
+    logger.info("Using mock mode for image analysis");
+    // Return mock brand kit data
+    return JSON.stringify({
+      colors: [
+        { name: "Primary Blue", hex: "#0066CC", usage: "primary" },
+        { name: "Dark Gray", hex: "#333333", usage: "text" },
+        { name: "White", hex: "#FFFFFF", usage: "background" },
+        { name: "Accent Orange", hex: "#FF6B35", usage: "accent" },
+      ],
+      fonts: [
+        { name: "Inter", usage: "body" },
+        { name: "Montserrat", usage: "heading" },
+      ],
+      logoInfo: {
+        hasLogo: true,
+        description: "Modern logo with clean lines",
+        colors: ["#0066CC", "#FF6B35"],
+      },
+      brandDescription: "A modern, professional brand with a focus on clean design and accessibility",
+    });
+  }
+
+  try {
+    logger.info("Analyzing image with Gemini Vision");
+
+    const imagePart = {
+      inlineData: {
+        data: base64Image,
+        mimeType: mimeType,
+      },
+    };
+
+    const result = await geminiModel.generateContent([prompt, imagePart]);
+    const response = await result.response;
+    let text = response.text();
+
+    // Clean up response (remove markdown code blocks if present)
+    text = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+
+    logger.info("Image analysis completed successfully");
+    return text;
+  } catch (error) {
+    logger.error("Gemini image analysis failed:", error.message);
+    throw error;
+  }
+};
+
 // Export as service object for consistency
 export default {
   runBrandAnalysis,
   analyzeTone,
   getServiceStatus,
+  analyzeImageWithPrompt,
 };
