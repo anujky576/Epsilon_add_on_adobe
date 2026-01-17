@@ -55,6 +55,18 @@ function clearStoredUser() {
   currentUser = null;
 }
 
+// List of admin emails with premium access
+const ADMIN_EMAILS = [
+  "admin@epsilon.com",
+  "saransh@epsilon.com",
+  "anuj@epsilon.com",
+  "demo@epsilon.com"
+];
+
+function isAdminUser(email) {
+  return ADMIN_EMAILS.includes(email.toLowerCase());
+}
+
 async function loginUser(email, name, organization) {
   // First, try to find existing user or create new one
   try {
@@ -66,25 +78,33 @@ async function loginUser(email, name, organization) {
 
     const result = await response.json();
     if (result.success) {
-      return result.data.user;
+      const user = result.data.user;
+      // Check if user is admin and grant premium access
+      user.isPremium = isAdminUser(user.email);
+      user.isAdmin = isAdminUser(user.email);
+      return user;
     }
   } catch (e) {
     console.log("Backend login not available, using local auth");
   }
 
   // Fallback: Create local user session
-  return {
+  const user = {
     _id: `local_${Date.now()}`,
     email,
     name,
     organization,
     isLocal: true,
+    isPremium: isAdminUser(email),
+    isAdmin: isAdminUser(email),
     createdAt: new Date().toISOString(),
   };
+  
+  return user;
 }
 
 // Google OAuth Configuration
-const GOOGLE_CLIENT_ID = "257641320688-smsgtgm2v8eg9k44m97pvvt196s9mn01.apps.googleusercontent.com"; // Replace with your Google Client ID
+const GOOGLE_CLIENT_ID = "341430871672-u2aipqb1a5icm261iniuk1aqinvmds16.apps.googleusercontent.com"; // Replace with your Google Client ID
 
 async function initGoogleAuth() {
   // Load Google Identity Services script
@@ -117,29 +137,38 @@ async function handleGoogleSignIn() {
     
     // Prompt user to sign in
     google.accounts.id.prompt((notification) => {
+      console.log("Google prompt notification:", notification);
       if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+        console.log("Google prompt not displayed, trying OAuth popup...");
         // Fallback: Use popup
-        google.accounts.oauth2.initTokenClient({
-          client_id: GOOGLE_CLIENT_ID,
-          scope: "email profile",
-          callback: async (response) => {
-            if (response.access_token) {
-              await fetchGoogleUserInfo(response.access_token);
-            }
-          },
-        }).requestAccessToken();
+        try {
+          google.accounts.oauth2.initTokenClient({
+            client_id: GOOGLE_CLIENT_ID,
+            scope: "email profile",
+            callback: async (response) => {
+              if (response.access_token) {
+                await fetchGoogleUserInfo(response.access_token);
+              }
+            },
+          }).requestAccessToken();
+        } catch (popupError) {
+          console.error("OAuth popup failed:", popupError);
+          throw new Error("Google Sign-In not available in this environment");
+        }
       }
     });
   } catch (error) {
     console.error("Google Sign-In error:", error);
-    // Fallback to simple email input for demo
-    const email = prompt("Enter your Google email:");
-    if (email && email.includes("@")) {
-      const name = email.split("@")[0];
-      const user = await loginUser(email, name, "");
-      user.authProvider = "google";
-      storeUser(user);
-      showUploadSection();
+    // Fallback: Use email login with a Google-style message
+    // Adobe add-on iframes don't support browser prompt() or popups
+    const loginEmail = document.getElementById("loginEmail");
+    const loginName = document.getElementById("loginName");
+    const loginError = document.getElementById("loginError");
+    
+    if (loginEmail && loginError) {
+      loginError.textContent = "Google Sign-In unavailable in add-on. Please use email sign-in above.";
+      loginError.classList.remove("hidden");
+      loginEmail.focus();
     }
   }
 }
@@ -189,6 +218,16 @@ function showUploadSection() {
   document.getElementById("resultsSection").classList.add("hidden");
   document.getElementById("profileBtn").classList.remove("hidden");
   document.getElementById("profileBtn").classList.add("flex");
+  
+  // Hide premium badge for admin/premium users
+  const premiumBadgeContainer = document.querySelector(".premium-badge-container");
+  if (premiumBadgeContainer) {
+    if (currentUser && (currentUser.isPremium || currentUser.isAdmin)) {
+      premiumBadgeContainer.style.display = "none";
+    } else {
+      premiumBadgeContainer.style.display = "block";
+    }
+  }
 }
 
 function handleSignout() {
@@ -801,6 +840,190 @@ async function handleAutoFix(e) {
 }
 
 // =============================================================================
+// BRAND KIT COMPARISON (MOCK DATA)
+// =============================================================================
+
+// Multiple comparison scenarios for variety
+const COMPARISON_SCENARIOS = [
+  {
+    similarityScore: 68,
+    summary: "Your brand kit shares moderate similarity with competitor brands in the tech industry. There are several opportunities to differentiate and create a more unique brand identity.",
+    similarities: [
+      { category: "Colors", description: "Both use blue as primary color (common in tech)", details: "Blue tones are prevalent in 73% of tech brands" },
+      { category: "Typography", description: "Sans-serif fonts for modern, clean appearance", details: "Inter and similar geometric sans-serifs are industry standard" },
+      { category: "Tone", description: "Professional and trustworthy messaging", details: "Formal tone aligns with B2B communication standards" }
+    ],
+    suggestions: [
+      { title: "Introduce a Unique Accent Color", description: "Consider adding a distinctive secondary color like coral, teal, or amber to break away from the blue monotony.", impact: "High", effort: "Low", icon: "palette" },
+      { title: "Develop Custom Typography", description: "Commission a custom typeface or choose a more distinctive font family to create stronger brand recognition.", impact: "High", effort: "High", icon: "title" },
+      { title: "Add Personality to Your Tone", description: "Inject more personality into your messaging. Consider a conversational or playful tone to stand out from formal competitors.", impact: "Medium", effort: "Medium", icon: "chat" },
+      { title: "Create Unique Visual Elements", description: "Design custom illustrations, patterns, or graphic elements that become synonymous with your brand.", impact: "High", effort: "Medium", icon: "draw" }
+    ],
+    advantages: [
+      { point: "Your color palette includes warmer tones that create a more approachable feel", icon: "favorite" },
+      { point: "Logo design is more abstract and memorable compared to text-only competitor logos", icon: "workspace_premium" },
+      { point: "Strong accessibility compliance gives you an edge in inclusive design", icon: "accessibility" }
+    ]
+  },
+  {
+    similarityScore: 82,
+    summary: "High similarity detected with competitor brand aesthetics. Your brand risks blending into the market. Strategic differentiation is critical to establish unique brand recall.",
+    similarities: [
+      { category: "Color Palette", description: "Near-identical primary colors (blue and white)", details: "Both brands use #0052CC variants - direct color overlap" },
+      { category: "Logo Style", description: "Minimalist geometric logos with similar composition", details: "Square/circle-based logos are overused in your sector" },
+      { category: "Typography", description: "Both use Helvetica/Arial family fonts", details: "Generic sans-serif choices lacking personality" },
+      { category: "Layout", description: "Grid-based symmetric layouts", details: "Traditional corporate design patterns" }
+    ],
+    suggestions: [
+      { title: "Bold Color Pivot", description: "Consider a dramatic shift to warm colors (orange, red, yellow) or unconventional choices like purple or emerald to immediately stand apart.", impact: "High", effort: "Medium", icon: "palette" },
+      { title: "Organic Logo Redesign", description: "Move away from geometric shapes. Consider fluid, organic, or abstract forms that evoke emotion over precision.", impact: "High", effort: "High", icon: "auto_awesome" },
+      { title: "Distinctive Serif Typography", description: "Break the sans-serif mold. Explore modern serif fonts or mixed font pairings for sophistication and uniqueness.", impact: "High", effort: "Low", icon: "title" },
+      { title: "Asymmetric Design System", description: "Introduce asymmetry and dynamic layouts to break the corporate grid monotony.", impact: "Medium", effort: "Medium", icon: "dashboard_customize" },
+      { title: "Brand Illustration Style", description: "Develop a proprietary illustration style (hand-drawn, 3D, isometric) that becomes instantly recognizable.", impact: "High", effort: "High", icon: "draw" }
+    ],
+    advantages: [
+      { point: "Your brand has better mobile-responsive design elements", icon: "smartphone" },
+      { point: "More engaging micro-animations in UI components", icon: "animation" }
+    ]
+  },
+  {
+    similarityScore: 45,
+    summary: "Excellent differentiation! Your brand stands out significantly from competitors. Focus on maintaining this uniqueness while refining execution for maximum impact.",
+    similarities: [
+      { category: "Industry Standards", description: "Both follow WCAG accessibility guidelines", details: "Essential compliance shared across industry leaders" },
+      { category: "Digital Presence", description: "Both maintain responsive design principles", details: "Modern web standards implementation" }
+    ],
+    suggestions: [
+      { title: "Amplify Your Unique Elements", description: "Your distinctive design choices are working. Consider licensing your design system or creating case studies to establish thought leadership.", impact: "Medium", effort: "Low", icon: "campaign" },
+      { title: "Trademark Your Visual Language", description: "Protect your unique color combinations and visual patterns through trademark registration to prevent copycats.", impact: "High", effort: "Medium", icon: "verified" },
+      { title: "Consistency Audit", description: "Ensure your unique brand elements are applied consistently across all touchpoints - sometimes unique brands lose impact through inconsistent application.", impact: "Medium", effort: "Low", icon: "fact_check" },
+      { title: "Push Boundaries Further", description: "Since you're already differentiated, consider experimental design elements like variable fonts, generative art, or AR experiences.", impact: "Medium", effort: "High", icon: "rocket_launch" }
+    ],
+    advantages: [
+      { point: "Highly distinctive color scheme creates instant brand recognition", icon: "emoji_events" },
+      { point: "Custom iconography set that no competitor can replicate", icon: "stars" },
+      { point: "Unique voice and tone that resonates with target audience", icon: "record_voice_over" },
+      { point: "Innovative use of white space creates premium perception", icon: "workspace_premium" },
+      { point: "Dynamic brand identity system that adapts contextually", icon: "auto_awesome" }
+    ]
+  },
+  {
+    similarityScore: 91,
+    summary: "Critical alert: Near-identical brand identity to competitor. Immediate rebranding recommended to avoid market confusion and potential legal issues.",
+    similarities: [
+      { category: "Logo Design", description: "Extremely similar logo shapes and layouts", details: "Both use circular emblems with centered text - potential trademark conflict" },
+      { category: "Color Scheme", description: "Identical primary and secondary color palette", details: "Matching #0066FF blue and #FF6B35 orange - exact hex matches" },
+      { category: "Typography", description: "Same font families in same hierarchies", details: "Both use Roboto for headings, Open Sans for body" },
+      { category: "Brand Voice", description: "Nearly identical messaging and tone", details: "Formal, enterprise-focused communication style" },
+      { category: "Visual Style", description: "Matching photography style and image treatment", details: "Both use bright, high-contrast product photography" }
+    ],
+    suggestions: [
+      { title: "Emergency Rebrand", description: "Immediate action required. Engage a branding agency for comprehensive rebrand to avoid legal exposure and market confusion.", impact: "High", effort: "High", icon: "warning" },
+      { title: "Complete Color Overhaul", description: "Select an entirely different color palette. Consider competitor analysis tools to find unused color territories in your market.", impact: "High", effort: "Medium", icon: "palette" },
+      { title: "New Logo Direction", description: "Abandon circular emblem concept. Explore wordmarks, abstract symbols, or mascot-based logos for clear differentiation.", impact: "High", effort: "High", icon: "auto_awesome" },
+      { title: "Distinctive Typography System", description: "Invest in custom fonts or select highly unique typefaces that establish a different personality.", impact: "High", effort: "Medium", icon: "title" },
+      { title: "Opposite Brand Personality", description: "If competitor is formal, go friendly. If they're minimalist, go expressive. Create polar opposite brand personality.", impact: "High", effort: "High", icon: "psychology" },
+      { title: "Legal Trademark Review", description: "Consult IP attorney to assess trademark infringement risks and establish clear brand differentiation legally.", impact: "High", effort: "Low", icon: "gavel" }
+    ],
+    advantages: [
+      { point: "Your website loads faster with better performance metrics", icon: "speed" }
+    ]
+  },
+  {
+    similarityScore: 56,
+    summary: "Moderate differentiation achieved. Your brand has distinct elements but shares some common industry patterns. Strategic enhancements can elevate uniqueness.",
+    similarities: [
+      { category: "Color Temperature", description: "Both use cool-toned color palettes", details: "Blues and greens dominate - calming, trustworthy perception" },
+      { category: "Content Style", description: "Similar content hierarchy and information architecture", details: "Standard hero-features-testimonials-CTA pattern" },
+      { category: "Photography", description: "Both use lifestyle photography approach", details: "Human-centered imagery showing product in use" }
+    ],
+    suggestions: [
+      { title: "Signature Brand Element", description: "Develop one ownable element - a unique pattern, shape, or visual device that appears consistently across all brand touchpoints.", impact: "High", effort: "Medium", icon: "fingerprint" },
+      { title: "Warm Color Injection", description: "Introduce warm accent colors (coral, gold, terracotta) to break from cool-toned monotony while maintaining primary palette.", impact: "Medium", effort: "Low", icon: "palette" },
+      { title: "Editorial Photography Style", description: "Shift from lifestyle to editorial-style photography with dramatic lighting, artistic composition, or conceptual approach.", impact: "High", effort: "Medium", icon: "photo_camera" },
+      { title: "Unconventional Layouts", description: "Break from standard web patterns. Explore split-screen designs, diagonal sections, or overlapping elements.", impact: "Medium", effort: "Medium", icon: "view_quilt" },
+      { title: "Motion Design Language", description: "Create a distinctive motion design system with signature transitions and animations that become part of brand identity.", impact: "Medium", effort: "High", icon: "animation" }
+    ],
+    advantages: [
+      { point: "Better balance between imagery and white space", icon: "balance" },
+      { point: "More intuitive user interface navigation", icon: "explore" },
+      { point: "Stronger call-to-action design that drives conversions", icon: "ads_click" },
+      { point: "Cohesive brand story across all marketing materials", icon: "auto_stories" }
+    ]
+  }
+];
+
+function generateMockComparison() {
+  // Randomly select a comparison scenario
+  const randomIndex = Math.floor(Math.random() * COMPARISON_SCENARIOS.length);
+  return COMPARISON_SCENARIOS[randomIndex];
+}
+
+function showComparisonResults() {
+  // Hide other sections
+  loginSection.classList.add("hidden");
+  uploadSection.classList.add("hidden");
+  resultsSection.classList.add("hidden");
+  comparisonUploadSection.classList.add("hidden");
+  comparisonSection.classList.remove("hidden");
+
+  // Generate mock comparison data
+  const comparison = generateMockComparison();
+
+  // Update similarity score
+  document.getElementById("similarityScore").textContent = `${comparison.similarityScore}%`;
+  document.getElementById("similaritySummary").textContent = comparison.summary;
+
+  // Render similarities
+  const similaritiesList = document.getElementById("similaritiesList");
+  similaritiesList.innerHTML = comparison.similarities.map(sim => `
+    <div class="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100">
+      <span class="material-symbols-outlined text-green-600 text-base mt-0.5">check_circle</span>
+      <div>
+        <p class="text-sm font-medium text-neutral-black">${sim.category}</p>
+        <p class="text-xs text-neutral-black/60 mt-1">${sim.description}</p>
+        <p class="text-[10px] text-neutral-black/40 mt-1">${sim.details}</p>
+      </div>
+    </div>
+  `).join('');
+
+  // Render suggestions
+  const suggestionsList = document.getElementById("suggestionsList");
+  suggestionsList.innerHTML = comparison.suggestions.map(sug => {
+    const impactColor = sug.impact === "High" ? "text-primary" : sug.impact === "Medium" ? "text-orange-600" : "text-blue-600";
+    const effortColor = sug.effort === "High" ? "text-red-600" : sug.effort === "Medium" ? "text-orange-600" : "text-green-600";
+    
+    return `
+      <div class="p-4 bg-white rounded-lg border border-primary/10">
+        <div class="flex items-start gap-3 mb-2">
+          <span class="material-symbols-outlined text-primary">${sug.icon}</span>
+          <div class="flex-1">
+            <h4 class="text-sm font-bold text-neutral-black">${sug.title}</h4>
+            <p class="text-xs text-neutral-black/60 mt-1">${sug.description}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 mt-3 pt-3 border-t border-black/[0.04]">
+          <span class="text-[9px] uppercase tracking-[0.15em] ${impactColor} font-bold">Impact: ${sug.impact}</span>
+          <span class="text-neutral-black/20">•</span>
+          <span class="text-[9px] uppercase tracking-[0.15em] ${effortColor} font-bold">Effort: ${sug.effort}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Render advantages
+  const advantagesList = document.getElementById("advantagesList");
+  advantagesList.innerHTML = comparison.advantages.map(adv => `
+    <div class="flex items-start gap-3 p-3 bg-orange-50 rounded-lg border border-orange-100">
+      <span class="material-symbols-outlined text-orange-600 text-base mt-0.5">${adv.icon}</span>
+      <p class="text-sm text-neutral-black">${adv.point}</p>
+    </div>
+  `).join('');
+
+  console.log("✅ Comparison results displayed");
+}
+
+// =============================================================================
 // MAIN INITIALIZATION
 // =============================================================================
 
@@ -812,9 +1035,18 @@ addOnUISdk.ready.then(() => {
   const loginSection = document.getElementById("loginSection");
   const uploadSection = document.getElementById("uploadSection");
   const resultsSection = document.getElementById("resultsSection");
+  const comparisonUploadSection = document.getElementById("comparisonUploadSection");
+  const comparisonSection = document.getElementById("comparisonSection");
   const analyzeBtn = document.getElementById("analyzeBtn");
+  const compareBtn = document.getElementById("compareBtn");
   const reAnalyzeBtn = document.getElementById("reAnalyzeBtn");
   const autoFixAllBtn = document.getElementById("autoFixAllBtn");
+  const backFromComparisonBtn = document.getElementById("backFromComparisonBtn");
+  const cancelComparisonBtn = document.getElementById("cancelComparisonBtn");
+  const runComparisonBtn = document.getElementById("runComparisonBtn");
+  const comparisonDropZone = document.getElementById("comparisonDropZone");
+  const comparisonFileInput = document.getElementById("comparisonFileInput");
+  const removeComparisonFileBtn = document.getElementById("removeComparisonFileBtn");
   const brandKitSelect = document.getElementById("brandKitSelect");
   const dropZone = document.getElementById("dropZone");
   const fileInput = document.getElementById("fileInput");
@@ -826,6 +1058,57 @@ addOnUISdk.ready.then(() => {
   const loginName = document.getElementById("loginName");
   const loginOrg = document.getElementById("loginOrg");
   const loginError = document.getElementById("loginError");
+
+  // Comparison state
+  let comparisonBrandKitFile = null;
+
+  // Premium tooltip elements
+  const premiumBadge = document.getElementById("premiumBadge");
+  const premiumTooltip = document.getElementById("premiumTooltip");
+  const upgradeToPremiumBtn = document.getElementById("upgradeToPremiumBtn");
+
+  // Premium badge hover handlers
+  if (premiumBadge && premiumTooltip) {
+    premiumBadge.addEventListener("mouseenter", () => {
+      premiumTooltip.classList.remove("hidden");
+      setTimeout(() => {
+        premiumTooltip.classList.remove("opacity-0", "translate-y-2");
+        premiumTooltip.classList.add("opacity-100", "translate-y-0");
+      }, 10);
+    });
+
+    premiumBadge.addEventListener("mouseleave", (e) => {
+      // Check if mouse is moving to tooltip
+      const relatedTarget = e.relatedTarget;
+      if (!relatedTarget || !premiumTooltip.contains(relatedTarget)) {
+        hideTooltip();
+      }
+    });
+
+    premiumTooltip.addEventListener("mouseenter", () => {
+      // Keep tooltip visible when hovering over it
+      premiumTooltip.classList.remove("hidden");
+      premiumTooltip.classList.remove("opacity-0", "translate-y-2");
+      premiumTooltip.classList.add("opacity-100", "translate-y-0");
+    });
+
+    premiumTooltip.addEventListener("mouseleave", () => {
+      hideTooltip();
+    });
+
+    function hideTooltip() {
+      premiumTooltip.classList.remove("opacity-100", "translate-y-0");
+      premiumTooltip.classList.add("opacity-0", "translate-y-2");
+      setTimeout(() => {
+        premiumTooltip.classList.add("hidden");
+      }, 300);
+    }
+  }
+
+  // Upgrade to premium button handler
+  upgradeToPremiumBtn?.addEventListener("click", () => {
+    alert("Premium features coming soon! 🚀\n\nGet access to:\n• Auto-fix violations\n• Guided reports\n• AI-powered insights\n• Unlimited analyses\n• Priority support");
+  });
 
   // Check for existing session
   const storedUser = getStoredUser();
@@ -863,6 +1146,12 @@ addOnUISdk.ready.then(() => {
     try {
       const user = await loginUser(email, name, org);
       storeUser(user);
+      
+      // Show premium access message for admins
+      if (user.isPremium || user.isAdmin) {
+        console.log("✨ Admin user logged in with premium access!");
+      }
+      
       showUploadSection();
     } catch (error) {
       loginError.textContent = "Login failed. Please try again.";
@@ -886,31 +1175,47 @@ addOnUISdk.ready.then(() => {
   // Google Sign-In handler
   const googleSignInBtn = document.getElementById("googleSignInBtn");
   googleSignInBtn.addEventListener("click", async () => {
-    googleSignInBtn.disabled = true;
-    googleSignInBtn.innerHTML =
-      '<span class="material-symbols-outlined loading-spinner text-base">progress_activity</span> Connecting...';
+    console.log("🔘 Google Sign-In button clicked");
     
-    try {
-      await handleGoogleSignIn();
-    } catch (error) {
-      loginError.textContent = "Google Sign-In failed. Please try again.";
-      loginError.classList.remove("hidden");
-    } finally {
-      googleSignInBtn.disabled = false;
-      googleSignInBtn.innerHTML = `
-        <svg width="18" height="18" viewBox="0 0 24 24">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-        </svg>
-        Continue with Google
-      `;
-    }
+    // Show immediate feedback with error message
+    loginError.textContent = "Google Sign-In is not available in Adobe Express add-ons. Please use email sign-in above.";
+    loginError.classList.remove("hidden");
+    loginEmail.focus();
+    
+    // Optional: Still try to load Google if it works, but don't block the UI
+    setTimeout(async () => {
+      try {
+        console.log("Attempting Google Sign-In...");
+        googleSignInBtn.disabled = true;
+        googleSignInBtn.innerHTML =
+          '<span class="material-symbols-outlined loading-spinner text-base">progress_activity</span> Connecting...';
+        
+        await handleGoogleSignIn();
+      } catch (error) {
+        console.error("Google Sign-In error:", error);
+      } finally {
+        googleSignInBtn.disabled = false;
+        googleSignInBtn.innerHTML = `
+          <svg width="18" height="18" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Continue with Google
+        `;
+      }
+    }, 100);
   });
 
   // Signout handler
   signoutBtn.addEventListener("click", handleSignout);
+
+  // Back from comparison handler
+  backFromComparisonBtn?.addEventListener("click", () => {
+    comparisonSection.classList.add("hidden");
+    uploadSection.classList.remove("hidden");
+  });
 
   // Profile dropdown elements
   const profileDropdown = document.getElementById("profileDropdown");
@@ -973,6 +1278,27 @@ addOnUISdk.ready.then(() => {
     console.log("  Uploaded brand kit file:", uploadedBrandKitFile?.name || "NONE");
     runFullAnalysis();
   });
+
+  // Compare button - Show upload section for competitor brand kit
+  compareBtn?.addEventListener("click", () => {
+    console.log("🔘 Compare button clicked!");
+    console.log("  Your brand kit:", uploadedBrandKitFile?.name || "NONE");
+    
+    // Show comparison upload section
+    uploadSection.classList.add("hidden");
+    comparisonUploadSection.classList.remove("hidden");
+    
+    // Display your brand kit name
+    document.getElementById("yourBrandKitName").textContent = uploadedBrandKitFile?.name || "brand-kit.png";
+    
+    // Reset comparison file
+    comparisonBrandKitFile = null;
+    if (comparisonFileInput) comparisonFileInput.value = "";
+    document.getElementById("comparisonFilePreview")?.classList.add("hidden");
+    comparisonDropZone?.classList.remove("hidden");
+    if (runComparisonBtn) runComparisonBtn.disabled = true;
+  });
+
   reAnalyzeBtn?.addEventListener("click", () => {
     resultsSection.classList.add("hidden");
     uploadSection.classList.remove("hidden");
@@ -985,6 +1311,7 @@ addOnUISdk.ready.then(() => {
     document.getElementById("uploadedFilePreview")?.classList.add("hidden");
     dropZone.classList.remove("hidden");
     analyzeBtn.disabled = true;
+    if (compareBtn) compareBtn.disabled = true;
   });
 
   // Auto-fix all
@@ -1057,9 +1384,13 @@ addOnUISdk.ready.then(() => {
       dropZone.classList.add("hidden");
     }
     
-    // Enable analyze button
+    // Enable analyze and compare buttons
     analyzeBtn.disabled = false;
     analyzeBtn.classList.remove("opacity-50", "cursor-not-allowed");
+    if (compareBtn) {
+      compareBtn.disabled = false;
+      compareBtn.classList.remove("opacity-50", "cursor-not-allowed");
+    }
     
     console.log("✅ Brand kit file uploaded and ready for analysis:", file.name, file.type);
     console.log("📊 Canvas design will be compared against this brand kit");
@@ -1081,6 +1412,114 @@ addOnUISdk.ready.then(() => {
     dropZone.classList.remove("hidden");
   });
 
+  // ============================================================================
+  // COMPARISON FILE UPLOAD HANDLERS
+  // ============================================================================
+
+  // Comparison file drag and drop
+  comparisonDropZone?.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    comparisonDropZone.classList.add("border-orange-500");
+  });
+
+  comparisonDropZone?.addEventListener("dragleave", () => {
+    comparisonDropZone.classList.remove("border-orange-500");
+  });
+
+  comparisonDropZone?.addEventListener("drop", (e) => {
+    e.preventDefault();
+    comparisonDropZone.classList.remove("border-orange-500");
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleComparisonFileUpload(files[0]);
+    }
+  });
+
+  comparisonDropZone?.addEventListener("click", () => comparisonFileInput?.click());
+  comparisonFileInput?.addEventListener("change", () => {
+    if (comparisonFileInput.files.length > 0) {
+      handleComparisonFileUpload(comparisonFileInput.files[0]);
+    }
+  });
+
+  // Handle comparison brand kit file upload
+  function handleComparisonFileUpload(file) {
+    comparisonBrandKitFile = file;
+    
+    // Show file preview
+    const preview = document.getElementById("comparisonFilePreview");
+    const fileName = document.getElementById("comparisonFileName");
+    
+    if (preview && fileName) {
+      fileName.textContent = file.name;
+      preview.classList.remove("hidden");
+      comparisonDropZone.classList.add("hidden");
+    }
+    
+    // Enable run comparison button
+    if (runComparisonBtn) {
+      runComparisonBtn.disabled = false;
+      runComparisonBtn.classList.remove("opacity-50", "cursor-not-allowed");
+    }
+    
+    console.log("✅ Comparison brand kit uploaded:", file.name);
+  }
+
+  // Remove comparison file button
+  removeComparisonFileBtn?.addEventListener("click", () => {
+    comparisonBrandKitFile = null;
+    if (comparisonFileInput) comparisonFileInput.value = "";
+    document.getElementById("comparisonFilePreview")?.classList.add("hidden");
+    comparisonDropZone?.classList.remove("hidden");
+    if (runComparisonBtn) {
+      runComparisonBtn.disabled = true;
+      runComparisonBtn.classList.add("opacity-50", "cursor-not-allowed");
+    }
+  });
+
+  // Cancel comparison button
+  cancelComparisonBtn?.addEventListener("click", () => {
+    comparisonUploadSection.classList.add("hidden");
+    uploadSection.classList.remove("hidden");
+    comparisonBrandKitFile = null;
+    if (comparisonFileInput) comparisonFileInput.value = "";
+    document.getElementById("comparisonFilePreview")?.classList.add("hidden");
+    comparisonDropZone?.classList.remove("hidden");
+  });
+
+  // Run comparison button
+  runComparisonBtn?.addEventListener("click", async () => {
+    if (!comparisonBrandKitFile) {
+      alert("Please upload a competitor brand kit first");
+      return;
+    }
+    
+    console.log("🔍 Comparing brand kits:");
+    console.log("  Your brand kit:", uploadedBrandKitFile?.name);
+    console.log("  Competitor brand kit:", comparisonBrandKitFile?.name);
+    
+    // Show loading state
+    runComparisonBtn.disabled = true;
+    const originalHTML = runComparisonBtn.innerHTML;
+    runComparisonBtn.innerHTML = '<span class="material-symbols-outlined loading-spinner text-base">progress_activity</span> Comparing...';
+    
+    // Wait for at least 3 seconds to simulate processing
+    const startTime = Date.now();
+    
+    // Simulate comparison processing
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    const elapsed = Date.now() - startTime;
+    console.log(`⏱️ Comparison took ${elapsed}ms`);
+    
+    // Show results
+    showComparisonResults();
+    
+    // Reset button
+    runComparisonBtn.innerHTML = originalHTML;
+    runComparisonBtn.disabled = false;
+  });
+
   async function runFullAnalysis() {
     if (!uploadedBrandKitFile) {
       alert("Please upload a brand kit first");
@@ -1096,6 +1535,7 @@ addOnUISdk.ready.then(() => {
     analyzeBtn.innerHTML =
       '<span class="material-symbols-outlined loading-spinner">progress_activity</span> Analyzing...';
     analyzeBtn.disabled = true;
+    if (compareBtn) compareBtn.disabled = true;
 
     try {
       // STEP 1: Process brand kit file and create temporary brand kit
@@ -1139,6 +1579,7 @@ addOnUISdk.ready.then(() => {
       analyzeBtn.innerHTML =
         '<span class="material-symbols-outlined">bolt</span> Analyze';
       analyzeBtn.disabled = false;
+      if (compareBtn) compareBtn.disabled = false;
     }
   }
 

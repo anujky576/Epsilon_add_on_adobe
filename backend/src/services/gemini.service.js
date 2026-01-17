@@ -31,6 +31,71 @@ import { logger } from "../utils/logger.js";
 const getUseMockAI = () => process.env.USE_MOCK_AI === "true";
 const getGeminiApiKey = () => process.env.GEMINI_API_KEY;
 
+// Retry configuration
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  initialDelayMs: 1000,
+  maxDelayMs: 10000,
+  backoffMultiplier: 2,
+  retryableStatusCodes: [429, 500, 502, 503, 504],
+};
+
+/**
+ * Sleep for a specified number of milliseconds
+ * @param {number} ms - Milliseconds to sleep
+ */
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Execute a function with exponential backoff retry logic
+ * @param {Function} fn - Async function to execute
+ * @param {string} operationName - Name of the operation for logging
+ * @returns {Promise<any>} Result of the function
+ */
+async function withRetry(fn, operationName = "Gemini API call") {
+  let lastError;
+  let delay = RETRY_CONFIG.initialDelayMs;
+
+  for (let attempt = 1; attempt <= RETRY_CONFIG.maxRetries + 1; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      
+      // Check if this is a retryable error (rate limit or server error)
+      const isRateLimitError = error.message?.includes("429") || 
+                               error.message?.includes("Too Many Requests") ||
+                               error.message?.includes("quota");
+      const isServerError = error.message?.includes("500") ||
+                            error.message?.includes("502") ||
+                            error.message?.includes("503") ||
+                            error.message?.includes("504");
+      
+      const isRetryable = isRateLimitError || isServerError;
+
+      if (!isRetryable || attempt > RETRY_CONFIG.maxRetries) {
+        // Not retryable or out of retries
+        if (attempt > RETRY_CONFIG.maxRetries) {
+          logger.error(`${operationName} failed after ${RETRY_CONFIG.maxRetries} retries: ${error.message}`);
+        }
+        throw error;
+      }
+
+      // Calculate delay with jitter to avoid thundering herd
+      const jitter = Math.random() * 0.3 * delay;
+      const waitTime = Math.min(delay + jitter, RETRY_CONFIG.maxDelayMs);
+      
+      logger.warn(`${operationName} failed (attempt ${attempt}/${RETRY_CONFIG.maxRetries + 1}): ${error.message}`);
+      logger.info(`Retrying in ${Math.round(waitTime)}ms...`);
+      
+      await sleep(waitTime);
+      delay *= RETRY_CONFIG.backoffMultiplier;
+    }
+  }
+
+  throw lastError;
+}
+
 // Lazy-loaded Gemini client (initialized on first use)
 let genAI = null;
 let model = null;
@@ -270,11 +335,11 @@ const generateMockAnalysis = (brandKit, design) => {
   const brandFonts = brandKit.fonts?.map((f) => f.name.toLowerCase()) || [];
 
   const violations = [];
-  let colorScore = 100;
+  let colorScore = 95;
   let fontScore = 100;
-  let logoScore = 100;
-  let accessibilityScore = 100;
-  let toneScore = 100;
+  let logoScore = 85;
+  let accessibilityScore = 80;
+  let toneScore = 85;
 
   // Helper: Check if color is a neutral (white, black, gray)
   const isNeutralColor = (hex) => {
@@ -552,20 +617,23 @@ export const runBrandAnalysis = async (brandKit, design) => {
 
     logger.debug("Sending prompt to Gemini...");
 
-    // Call Gemini API
-    const result = await geminiModel.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    // Call Gemini API with retry logic for rate limits
+    const analysisResult = await withRetry(async () => {
+      const result = await geminiModel.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
 
-    // Parse JSON from response (handle potential markdown code blocks)
-    let jsonText = text;
-    if (text.includes("```json")) {
-      jsonText = text.split("```json")[1].split("```")[0].trim();
-    } else if (text.includes("```")) {
-      jsonText = text.split("```")[1].split("```")[0].trim();
-    }
+      // Parse JSON from response (handle potential markdown code blocks)
+      let jsonText = text;
+      if (text.includes("```json")) {
+        jsonText = text.split("```json")[1].split("```")[0].trim();
+      } else if (text.includes("```")) {
+        jsonText = text.split("```")[1].split("```")[0].trim();
+      }
 
-    const analysisResult = JSON.parse(jsonText);
+      return JSON.parse(jsonText);
+    }, "Brand analysis");
+
     analysisResult.processingTime = Date.now() - startTime;
     analysisResult.usedAI = true;
 
@@ -616,15 +684,18 @@ export const analyzeTone = async (text, toneRules) => {
       .replace("{BANNED_WORDS}", bannedWords.join(", "))
       .replace("{TEXT}", text);
 
-    const result = await geminiModel.generateContent(prompt);
-    const response = await result.response;
-    let jsonText = response.text();
+    // Call Gemini API with retry logic for rate limits
+    return await withRetry(async () => {
+      const result = await geminiModel.generateContent(prompt);
+      const response = await result.response;
+      let jsonText = response.text();
 
-    if (jsonText.includes("```json")) {
-      jsonText = jsonText.split("```json")[1].split("```")[0].trim();
-    }
+      if (jsonText.includes("```json")) {
+        jsonText = jsonText.split("```json")[1].split("```")[0].trim();
+      }
 
-    return JSON.parse(jsonText);
+      return JSON.parse(jsonText);
+    }, "Tone analysis");
   } catch (error) {
     logger.error("Tone analysis failed:", error.message);
     return generateMockToneAnalysis(text, style, bannedWords);
@@ -688,12 +759,16 @@ const analyzeImageWithPrompt = async (base64Image, mimeType, prompt) => {
       },
     };
 
-    const result = await geminiModel.generateContent([prompt, imagePart]);
-    const response = await result.response;
-    let text = response.text();
+    // Call Gemini API with retry logic for rate limits
+    const text = await withRetry(async () => {
+      const result = await geminiModel.generateContent([prompt, imagePart]);
+      const response = await result.response;
+      let responseText = response.text();
 
-    // Clean up response (remove markdown code blocks if present)
-    text = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      // Clean up response (remove markdown code blocks if present)
+      responseText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      return responseText;
+    }, "Image analysis");
 
     logger.info("Image analysis completed successfully");
     return text;

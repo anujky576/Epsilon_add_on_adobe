@@ -20,8 +20,8 @@
         theme: {
           extend: {
             colors: {
-              primary: "#bb0027",
-              "primary-hover": "#90001e",
+              primary: "#4169fd",
+              "primary-hover": "#3451cc",
               base: "#f2f2f2",
               "neutral-black": "#141414",
             },
@@ -60,11 +60,11 @@
         background: #f2f2f2;
       }
       .scrollbar-thin::-webkit-scrollbar-thumb {
-        background: rgba(187, 0, 39, 0.2);
+        background: rgba(65, 105, 253, 0.2);
         border-radius: 4px;
       }
       .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-        background: #bb0027;
+        background: #4169fd;
       }
       .glass {
         background: rgba(255, 255, 255, 0.9);
@@ -243,11 +243,92 @@
 
         <!-- Upload Brand Kit (Required) -->
         <div class="mb-6">
-          <label
-            class="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-black/40 flex items-center gap-2 mb-2"
-          >
-            <span class="material-symbols-outlined text-sm">image</span> Upload Brand Kit
-          </label>
+          <div class="flex items-center justify-between mb-2">
+            <label
+              class="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-black/40 flex items-center gap-2"
+            >
+              <span class="material-symbols-outlined text-sm">image</span> Upload Brand Kit
+            </label>
+            
+            <!-- Premium Access Badge -->
+            <div class="relative premium-badge-container">
+              <button
+                id="premiumBadge"
+                class="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white rounded-full text-[9px] font-bold uppercase tracking-[0.15em] transition-all duration-300 shadow-sm hover:shadow-md"
+              >
+                <span class="material-symbols-outlined text-sm">workspace_premium</span>
+                +Premium
+              </button>
+              
+              <!-- Premium Features Tooltip -->
+              <div
+                id="premiumTooltip"
+                class="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-xl border border-black/[0.08] p-3 z-50 hidden opacity-0 transform translate-y-2 transition-all duration-300"
+              >
+                <div class="flex items-center gap-1.5 mb-2 pb-2 border-b border-black/[0.06]">
+                  <span class="material-symbols-outlined text-amber-500 text-base">stars</span>
+                  <h4 class="text-xs font-bold text-neutral-black">Premium Features</h4>
+                </div>
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-md px-2 py-1.5 mb-2">
+                  <p class="text-[9px] text-blue-700 font-semibold text-center flex items-center justify-center gap-1">
+                    <span class="material-symbols-outlined text-[10px]">schedule</span>
+                    Coming Soon
+                  </p>
+                </div>
+                <ul class="space-y-1.5">
+                  <li class="flex items-start gap-1.5">
+                    <span class="material-symbols-outlined text-green-600 text-sm mt-0.5">check_circle</span>
+                    <div>
+                      <p class="text-[10px] font-semibold text-neutral-black">Auto-Fix Violations</p>
+                      <p class="text-[9px] text-neutral-black/50 leading-tight">Fix brand issues instantly</p>
+                    </div>
+                  </li>
+                  <li class="flex items-start gap-1.5">
+                    <span class="material-symbols-outlined text-green-600 text-sm mt-0.5">check_circle</span>
+                    <div>
+                      <p class="text-[10px] font-semibold text-neutral-black">Guided Reports</p>
+                      <p class="text-[9px] text-neutral-black/50 leading-tight">Executive compliance reports</p>
+                    </div>
+                  </li>
+                  <li class="flex items-start gap-1.5">
+                    <span class="material-symbols-outlined text-green-600 text-sm mt-0.5">check_circle</span>
+                    <div>
+                      <p class="text-[10px] font-semibold text-neutral-black">AI-Powered Insights</p>
+                      <p class="text-[9px] text-neutral-black/50 leading-tight">Advanced Gemini AI analysis</p>
+                    </div>
+                  </li>
+                  <!-- <li class="flex items-start gap-1.5">
+                    <span class="material-symbols-outlined text-green-600 text-sm mt-0.5">check_circle</span>
+                    <div>
+                      <p class="text-[10px] font-semibold text-neutral-black">Brand Comparison</p>
+                      <p class="text-[9px] text-neutral-black/50 leading-tight">Compare with competitors</p>
+                    </div>
+                  </li> -->
+                  <li class="flex items-start gap-1.5">
+                    <span class="material-symbols-outlined text-green-600 text-sm mt-0.5">check_circle</span>
+                    <div>
+                      <p class="text-[10px] font-semibold text-neutral-black">Unlimited Analyses</p>
+                      <p class="text-[9px] text-neutral-black/50 leading-tight">No daily limits</p>
+                    </div>
+                  </li>
+                  <li class="flex items-start gap-1.5">
+                    <span class="material-symbols-outlined text-green-600 text-sm mt-0.5">check_circle</span>
+                    <div>
+                      <p class="text-[10px] font-semibold text-neutral-black">Priority Support</p>
+                      <p class="text-[9px] text-neutral-black/50 leading-tight">24/7 dedicated help</p>
+                    </div>
+                  </li>
+                </ul>
+                <button
+                  id="upgradeToPremiumBtn"
+                  class="w-full mt-3 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white py-2 rounded-lg font-bold uppercase tracking-[0.1em] text-[9px] transition-all duration-300 flex items-center justify-center gap-1.5"
+                >
+                  <span class="material-symbols-outlined text-sm">upgrade</span>
+                  Upgrade Now
+                </button>
+              </div>
+            </div>
+          </div>
           <p class="text-[9px] text-neutral-black/30 mb-3">Upload your brand guidelines as an image or PDF</p>
 
         <div
@@ -298,6 +379,16 @@
           <span class="material-symbols-outlined text-base">bolt</span>
           Analyze 
         </button>
+
+        <!-- Compare with Another Brand Kit Button -->
+        <button
+          id="compareBtn"
+          class="w-full bg-white border border-primary/30 hover:border-primary hover:bg-primary/5 text-primary py-3 rounded-lg font-bold uppercase tracking-[0.1em] text-xs transition-all duration-500 flex items-center justify-center gap-2 mt-3 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled
+        >
+          <span class="material-symbols-outlined text-base">compare</span>
+          Compare with Another Brand Kit
+        </button>
         </div>
 
         <!-- Sign Out Button at Bottom -->
@@ -345,7 +436,7 @@
                   cy="70"
                   r="60"
                   fill="none"
-                  stroke="#bb0027"
+                  stroke="#4169fd"
                   stroke-width="10"
                   stroke-linecap="round"
                   stroke-dasharray="377"
@@ -491,6 +582,152 @@
             Auto-Fix All
           </button>
         </div>
+      </div>
+
+      <!-- Comparison Upload Section (Hidden Initially) -->
+      <div id="comparisonUploadSection" class="hidden">
+        <!-- Header -->
+        <div class="mb-6">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="material-symbols-outlined text-primary">compare</span>
+            <h2 class="editorial-title text-2xl text-neutral-black">Compare Brand Kits</h2>
+          </div>
+          <p class="text-[9px] text-neutral-black/40">Upload another brand kit to compare</p>
+        </div>
+
+        <!-- Your Brand Kit Preview -->
+        <div class="card p-4 mb-4 bg-blue-50 border border-blue-200">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <span class="material-symbols-outlined text-blue-600">check_circle</span>
+            </div>
+            <div class="flex-1">
+              <p class="text-xs text-blue-900/60 uppercase tracking-[0.1em] font-bold mb-1">Your Brand Kit</p>
+              <p id="yourBrandKitName" class="text-sm font-medium text-neutral-black">brand-kit.png</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload Competitor Brand Kit -->
+        <div class="mb-6">
+          <label class="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-black/40 flex items-center gap-2 mb-2">
+            <span class="material-symbols-outlined text-sm">image</span> Upload another Brand Kit
+          </label>
+          <p class="text-[9px] text-neutral-black/30 mb-3">Upload their brand guidelines to compare</p>
+
+          <div
+            id="comparisonDropZone"
+            class="card p-8 text-center cursor-pointer border-2 border-dashed border-orange-300 hover:border-orange-500 bg-orange-50/50"
+          >
+            <div class="flex flex-col items-center gap-3">
+              <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
+                <span class="material-symbols-outlined text-3xl text-orange-600">upload_file</span>
+              </div>
+              <p class="text-neutral-black font-bold text-sm">Drag & drop another brand kit</p>
+              <p class="text-[9px] uppercase tracking-[0.2em] text-neutral-black/40">Or click to select • PNG, JPG, SVG, PDF</p>
+              <input
+                type="file"
+                id="comparisonFileInput"
+                class="hidden"
+                accept="image/*,.pdf,.svg"
+              />
+            </div>
+          </div>
+
+          <!-- Uploaded Competitor Brand Kit Preview -->
+          <div id="comparisonFilePreview" class="mt-4 card p-4 hidden bg-orange-50 border border-orange-200">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <span class="material-symbols-outlined text-orange-600">check_circle</span>
+                </div>
+                <div>
+                  <p id="comparisonFileName" class="text-sm font-medium text-neutral-black">competitor.png</p>
+                  <p class="text-[10px] text-neutral-black/40">Ready for comparison</p>
+                </div>
+              </div>
+              <button id="removeComparisonFileBtn" class="text-neutral-black/30 hover:text-orange-600 transition-colors" title="Change brand kit">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-3">
+          <button
+            id="cancelComparisonBtn"
+            class="flex-1 bg-white border border-black/[0.06] text-neutral-black/60 py-3 rounded-xl font-bold uppercase tracking-[0.1em] text-[10px] hover:border-primary/20 hover:text-primary transition-all duration-500 flex items-center justify-center gap-2"
+          >
+            <span class="material-symbols-outlined text-base">arrow_back</span>
+            Cancel
+          </button>
+          <button
+            id="runComparisonBtn"
+            class="flex-1 bg-primary hover:bg-primary-hover text-white py-3 rounded-xl font-bold uppercase tracking-[0.1em] text-[10px] transition-all duration-500 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled
+          >
+            <span class="material-symbols-outlined text-base">compare</span>
+            Compare
+          </button>
+        </div>
+      </div>
+
+      <!-- Comparison Results Section (Hidden Initially) -->
+      <div id="comparisonSection" class="hidden">
+        <!-- Header -->
+        <div class="mb-6">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="material-symbols-outlined text-primary">compare</span>
+            <h2 class="editorial-title text-2xl text-neutral-black">Brand Kit Comparison</h2>
+          </div>
+          <p class="text-[9px] text-neutral-black/40">Analyzing similarities and differentiation opportunities</p>
+        </div>
+
+        <!-- Comparison Summary Card -->
+        <div class="card p-6 mb-4 border-l-4 border-blue-500">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-black/60">Similarity Score</h3>
+            <span id="similarityScore" class="editorial-title text-3xl text-blue-600">--</span>
+          </div>
+          <p id="similaritySummary" class="text-sm text-neutral-black/60 leading-relaxed"></p>
+        </div>
+
+        <!-- Similarities Section -->
+        <div class="card p-6 mb-4">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-green-600">check_circle</span>
+            <h3 class="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-black/60">Common Elements</h3>
+          </div>
+          <div class="space-y-3" id="similaritiesList"></div>
+        </div>
+
+        <!-- Differentiation Suggestions -->
+        <div class="card p-6 mb-4 bg-gradient-to-br from-primary/5 to-transparent">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-primary">stars</span>
+            <h3 class="text-[9px] font-bold uppercase tracking-[0.2em] text-primary">Stand Out Suggestions</h3>
+          </div>
+          <div class="space-y-4" id="suggestionsList"></div>
+        </div>
+
+        <!-- Competitive Advantages -->
+        <div class="card p-6 mb-4">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-orange-600">emoji_events</span>
+            <h3 class="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-black/60">Your Competitive Advantages</h3>
+          </div>
+          <div class="space-y-3" id="advantagesList"></div>
+        </div>
+
+        <!-- Back Button -->
+        <button
+          id="backFromComparisonBtn"
+          class="w-full bg-white border border-black/[0.06] text-neutral-black/60 py-3 rounded-xl font-bold uppercase tracking-[0.1em] text-[10px] hover:border-primary/20 hover:text-primary transition-all duration-500 flex items-center justify-center gap-2"
+        >
+          <span class="material-symbols-outlined text-base">arrow_back</span>
+          Back to Upload
+        </button>
       </div>
     </div>
 
