@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * BrandGuard AI - Standardized API Response Utilities
+ * Epsilon - Standardized API Response Utilities
  * =============================================================================
  *
  * ARCHITECTURE DECISION:

@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * BrandGuard AI - Brand Kit Extraction Controller
+ * Epsilon - Brand Kit Extraction Controller
  * =============================================================================
  *
  * Extracts brand information from uploaded brand kit files (images/PDFs)

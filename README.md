@@ -1,4 +1,4 @@
-# 🎨 BrandGuard AI - Adobe Express Add-on
+# 🎨 Epsilon - Adobe Express Add-on
 
 > **Intelligent Brand Compliance Analysis for Adobe Express Designs**  
 > Automatically detect and fix brand guideline violations using AI-powered analysis.
@@ -11,7 +11,7 @@
 
 ## 📖 Overview
 
-**BrandGuard AI** is an intelligent Adobe Express add-on that ensures your designs comply with brand guidelines. It analyzes colors, typography, logos, accessibility, and tone—providing real-time feedback and automated fixes powered by Google Gemini AI.
+**Epsilon** is an intelligent Adobe Express add-on that ensures your designs comply with brand guidelines. It analyzes colors, typography, logos, accessibility, and tone—providing real-time feedback and automated fixes powered by Google Gemini AI.
 
 ### ✨ Key Features
 
@@ -388,5 +388,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
   <p>Built with ❤️ for designers and brand managers</p>
-  <p>© 2026 BrandGuard AI. All rights reserved.</p>
+  <p>© 2026 Epsilon. All rights reserved.</p>
 </div>

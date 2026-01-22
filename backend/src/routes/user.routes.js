@@ -1,9 +1,9 @@
 /**
  * =============================================================================
- * BrandGuard AI - User Routes
+ * Epsilon - User Routes
  * =============================================================================
  *
- * Simple user authentication routes for the BrandGuard AI Add-on.
+ * Simple user authentication routes for the Epsilon Add-on.
  * For hackathon purposes, this uses a simplified login flow without passwords.
  */
 

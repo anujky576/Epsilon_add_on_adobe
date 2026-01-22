@@ -1,7 +1,7 @@
 {
   "name": "brandguard-ai-backend",
   "version": "1.0.0",
-  "description": "Production-grade API-first SaaS backend for BrandGuard AI - Adobe Express brand compliance checking with Gemini AI",
+  "description": "Production-grade API-first SaaS backend for Epsilon - Adobe Express brand compliance checking with Gemini AI",
   "main": "src/server.js",
   "type": "module",
   "scripts": {
@@ -15,7 +15,7 @@
     "gemini-ai",
     "design-analysis"
   ],
-  "author": "BrandGuard AI Team",
+  "author": "Epsilon Team",
   "license": "MIT",
   "dependencies": {
     "@google/generative-ai": "^0.21.0",

@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * BrandGuard AI - Accessibility Check Service
+ * Epsilon - Accessibility Check Service
  * =============================================================================
  *
  * ARCHITECTURE DECISION:

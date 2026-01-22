@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * BrandGuard AI - Executive Summary Controller
+ * Epsilon - Executive Summary Controller
  * =============================================================================
  *
  * ARCHITECTURE DECISION:

@@ -1,8 +1,8 @@
-# BrandGuard AI Backend
+# Epsilon Backend
 
 **Production-grade, API-first SaaS Backend for Brand Compliance Checking**
 
-BrandGuard AI analyzes Adobe Express designs against brand guidelines using Google Gemini AI. It detects violations in colors, typography, logos, accessibility, and tone—then suggests fixes.
+Epsilon analyzes Adobe Express designs against brand guidelines using Google Gemini AI. It detects violations in colors, typography, logos, accessibility, and tone—then suggests fixes.
 
 ---
 
@@ -170,7 +170,7 @@ Error responses:
                         │
                         ▼
 ┌─────────────────────────────────────────────────────┐
-│              BrandGuard AI Backend                   │
+│              Epsilon Backend                   │
 ├─────────────────────────────────────────────────────┤
 │  POST /api/brandkit   → Create brand kit            │
 │  POST /api/design     → Submit canvas data          │

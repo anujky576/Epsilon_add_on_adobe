@@ -2,10 +2,10 @@ import addOnUISdk from "https://new.express.adobe.com/static/add-on-sdk/sdk.js";
 
 /**
  * =============================================================================
- * BrandGuard AI - Adobe Express Add-on (Enterprise Edition)
+ * Epsilon - Adobe Express Add-on (Enterprise Edition)
  * =============================================================================
  *
- * Enterprise-grade brand governance add-on integrating with BrandGuard AI backend.
+ * Enterprise-grade brand governance add-on integrating with Epsilon backend.
  * Features:
  * - Dynamic brand kit selection with versioning
  * - Real-time canvas data extraction
@@ -1028,7 +1028,7 @@ function showComparisonResults() {
 // =============================================================================
 
 addOnUISdk.ready.then(() => {
-  console.log("🛡️ BrandGuard AI Enterprise Add-on Ready");
+  console.log("🛡️ Epsilon Enterprise Add-on Ready");
   console.log(`📡 Backend: ${API_BASE_URL}`);
 
   // DOM Elements

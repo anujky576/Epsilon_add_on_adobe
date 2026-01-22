@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * BrandGuard AI - Executive Summary Routes
+ * Epsilon - Executive Summary Routes
  * =============================================================================
  *
  * BASE PATH: /api/executive-summary

@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * BrandGuard AI - Server Entry Point
+ * Epsilon - Server Entry Point
  * =============================================================================
  *
  * ARCHITECTURE DECISION:
@@ -118,7 +118,7 @@ const gracefulShutdown = async (signal, server) => {
 // ---------------------------------------------------------------------------
 const startServer = async () => {
   logger.info("=".repeat(60));
-  logger.info("🚀 BrandGuard AI Backend Starting...");
+  logger.info("🚀 Epsilon Backend Starting...");
   logger.info("=".repeat(60));
   logger.info(`   Environment: ${NODE_ENV}`);
   logger.info(`   Port: ${PORT}`);
@@ -140,7 +140,7 @@ const startServer = async () => {
   const server = app.listen(PORT, () => {
     logger.info("");
     logger.info("=".repeat(60));
-    logger.info("✅ BrandGuard AI Backend is READY");
+    logger.info("✅ Epsilon Backend is READY");
     logger.info("=".repeat(60));
     logger.info(`   Local:   http://localhost:${PORT}`);
     logger.info(`   Health:  http://localhost:${PORT}/health`);

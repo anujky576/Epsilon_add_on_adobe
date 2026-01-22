@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * BrandGuard AI - Express Application Configuration
+ * Epsilon - Express Application Configuration
  * =============================================================================
  *
  * ARCHITECTURE DECISION:
@@ -121,7 +121,7 @@ const createApp = () => {
         timestamp: new Date().toISOString(),
         version: "1.0.0",
       },
-      message: "BrandGuard AI Backend is running",
+      message: "Epsilon Backend is running",
     });
   });
 

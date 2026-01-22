@@ -12,7 +12,7 @@ export default function Sidebar() {
     <aside className="sidebar">
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">🛡️</div>
-        <div className="sidebar-logo-text">BrandGuard AI</div>
+        <div className="sidebar-logo-text">Epsilon</div>
       </div>
       
       <nav className="sidebar-nav">

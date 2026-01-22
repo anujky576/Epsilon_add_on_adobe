@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * BrandGuard AI - Document Sandbox
+ * Epsilon - Document Sandbox
  * =============================================================================
  *
  * This script runs in Adobe Express's Document Sandbox and has access to the
@@ -299,5 +299,5 @@ runtime.exposeApi({
   },
 });
 
-console.log("BrandGuard AI Document Sandbox initialized");
+console.log("Epsilon Document Sandbox initialized");
 console.log("BrandGuard: API exposed - extractDesignData() is ready");

@@ -1,5 +1,5 @@
 /**
- * BrandGuard AI - API Client
+ * Epsilon - API Client
  * Centralized API communication with the backend
  */
 

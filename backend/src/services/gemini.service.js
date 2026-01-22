@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * BrandGuard AI - Gemini AI Service
+ * Epsilon - Gemini AI Service
  * =============================================================================
  *
  * ARCHITECTURE DECISION:
@@ -153,7 +153,7 @@ function getModel() {
  * A11y = Accessibility (A + 11 letters + y)
  */
 const ANALYSIS_PROMPT_TEMPLATE = `
-You are BrandGuard AI, a deterministic brand compliance engine.
+You are Epsilon, a deterministic brand compliance engine.
 
 You analyze ONLY the provided JSON metadata.
 You DO NOT assume missing information.
